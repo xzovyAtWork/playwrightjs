@@ -32,9 +32,9 @@ async function commandAnalogDevice(device, value){
 		console.log(`commanding ${device.name} failed`)
 	}
 }
-async function commandBinaryDevice(device, state){
+async function commandBinaryDevice(device, state, attempt = 1){
 	const {lockedValue, commandValue, name} = device
-	console.log(`commanding ${name}: ${state}`)
+	console.log(`commanding ${name}: ${state}, attempt: ${attempt}`)
 	const currentLockedValue = await actionContent.locator("#bodyTable").locator(`[updateid="prim_${lockedValue}_ctrlid1"]`).locator('span').first().textContent();
 	if(currentLockedValue === state){console.log(`${device.name} already ${state}`); return;}
 	await actionContent.locator("#bodyTable").locator(`[updateid="prim_${lockedValue}_ctrlid1"]`).click();
@@ -47,7 +47,12 @@ async function commandBinaryDevice(device, state){
 			await expect(actionContent.locator("#bodyTable").locator(`[primid="prim_${commandValue}"]`)).toHaveText(state, {timeout: 2000})
 			
 	}catch(err){
-		console.log(`commanding ${device.name} failed`)
+		if(attempt >=3 ){
+			console.log(`commanding ${device.name} failed, aborting`);
+			return ;
+		}
+		console.log(`commanding ${device.name} failed, trying again`);
+		commandBinaryDevice(device, state, attempt+=1);
 	}
 };
 async function getAnalogFeedback(device){
@@ -253,6 +258,7 @@ test('fill tank',async() => {
 	test.setTimeout(0)
 	await commandBinaryDevice(fill, 'Open');
 	await commandBinaryDevice(drain, 'Close');
+	console.log("waiting for WOL to change state")
 	await expect(await actionContent.locator("#bodyTable").locator(`[primid="prim_${wol.feedbackValue}"]`)).toHaveText("Normal", {timeout: 10 * 60000})
 	
 })
