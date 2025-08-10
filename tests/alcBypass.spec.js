@@ -154,7 +154,6 @@ test.afterEach(async ({ }, testInfo) => {
 });
 test('download program', async ({ browser }) => {
 	let saValue = await actionContent.locator("#bodyTable").locator(`[primid="prim_${saTemp.feedbackValue}"]`).textContent()
-	console.log(saValue)
 	test.skip(saValue !== '?', "Program already downloaded")
 	test.setTimeout(10 * 60000)
 	let text;
