@@ -275,7 +275,7 @@ test('fill tank',async() => {
 	console.log("waiting for WOL to change state")
 	await expect(await actionContent.locator("#bodyTable").locator(`[primid="prim_${wol.feedbackValue}"]`)).toHaveText("Normal", {timeout: 10 * 60000})
 })
-test.describe('bypass', async () => {
+test.describe('evap section', async () => {
 	test.describe.configure({ mode: 'serial' });
 	test.beforeEach(async ()=>{
 		await page.waitForLoadState();
