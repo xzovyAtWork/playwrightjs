@@ -161,14 +161,15 @@ test('download program', async ({ browser }) => {
 	console.log('downloading controller program...');
 	await page.waitForLoadState();
 	await page.evaluate(() => window.invokeManualCommand('download'));
-	await expect(actionContent.locator("#ch_message_div", {hasText: "Downloading"})).toBeVisible();
+	await expect(actionContent.locator("#ch_message_div", {hasText: "Downloading"})).toBeVisible({timeout: 5000});
 	while(await actionContent.locator("#ch_message_div", {hasText: "Downloading"}).isVisible()){
 		text = await actionContent.locator("#ch_message_div").first().textContent();
 		console.log(`${text}`);
 		await page.waitForTimeout(5000);
 	}
 	await expect(actionContent.locator("#ch_message_div", {hasText: "Downloading"})).not.toBeVisible()
-	await expect(actionContent.locator("#ch_message_div").first()).not.toBeVisible()
+	console.log(await actionContent.locator("#ch_message_div").first().textContent())
+	await expect(await actionContent.locator("#ch_message_div").first()).not.toBeVisible({timeout: 5000})
 	console.log(text)
 	console.log('program download complete');
 })
