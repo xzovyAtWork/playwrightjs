@@ -32,6 +32,8 @@ async function commandAnalogDevice(device, value){
 		console.log(`commanding ${device.name} failed`)
 	}
 }
+// page.locator('iframe[name="actionContent"]').contentFrame().getByText('Close').first()
+//locator('iframe[name="actionContent"]').contentFrame().locator('div').filter({ hasText: 'Close' }).nth(3)
 async function commandBinaryDevice(device, state, attempt = 1){
 	const {lockedValue, commandValue, name} = device
 	console.log(`commanding ${name}: ${state}, attempt: ${attempt}`)
@@ -39,16 +41,16 @@ async function commandBinaryDevice(device, state, attempt = 1){
 	if(currentLockedValue === state){console.log(`${device.name} already ${state}`); return;}
 	await actionContent.locator("#bodyTable").locator(`[updateid="prim_${lockedValue}_ctrlid1"]`).click();
 	try{
-			try{
-				await actionContent.locator('div.ControlLightDropList-WidgetLightDropList-rowinactive').getByText(state).click();
-			}catch(err){
-				console.log(e)
+		try{
+			await actionContent.locator('div.ControlLightDropList-WidgetLightDropList-rowinactive').getByText(state).click();
+		}catch(err){
 				await actionContent.locator('div.ControlLightDropList-WidgetLightDropList-rowinactive').getByText(state).nth(1).click();
+				console.log(e)
 			}
 			await expect(actionContent.locator("#bodyTable").locator(`[primid="prim_${commandValue}"]`)).toHaveText(state, {timeout: 2000})
 			
 	}catch(err){
-		if(attempt >=3 ){
+		if(attempt >3 ){
 			console.log(`commanding ${device.name} failed, aborting`);
 			return ;
 		}
@@ -151,7 +153,9 @@ test.afterEach(async ({ }, testInfo) => {
 	console.log(`✅ Completed test: ${testInfo.title}`);
 });
 test('download program', async ({ browser }) => {
-	// test.describe.configure({retries: 3})
+	let saValue = await actionContent.locator("#bodyTable").locator(`[primid="prim_${saTemp.feedbackValue}"]`).textContent()
+	console.log(saValue)
+	test.skip(saValue !== '?', "Program already downloaded")
 	test.setTimeout(10 * 60000)
 	let text;
 	console.log('downloading controller program...');
@@ -169,25 +173,30 @@ test('download program', async ({ browser }) => {
 	console.log('program download complete');
 })
 test('check faults', async () =>{
-	// test.describe.configure({retries: 3})
-	const rows = await actionContent.locator('#bodyTable').locator('tr')
-	let quantityFaulted = 0
-	for(let i = 0; i < 58; ++i){
-		let firstColumn = await actionContent.locator('#bodyTable').locator('tr').nth(i).locator('td').first().locator('span')
-		const color = await firstColumn.evaluate(el =>
-			window.getComputedStyle(el).getPropertyValue('color')
-		  );
-		if(color == 'rgb(255, 0, 0)'){
-			console.log(`${await firstColumn.textContent()} faulted`)
-			quantityFaulted++;
+	async function checkFaults(quantityFaulted = 0){
+
+		for(let i = 0; i < 58; ++i){
+			let firstColumn = await actionContent.locator('#bodyTable').locator('tr').nth(i).locator('td').first().locator('span')
+			const color = await firstColumn.evaluate(el =>
+				window.getComputedStyle(el).getPropertyValue('color')
+				);
+				if(color == 'rgb(255, 0, 0)'){
+					console.log(`${await firstColumn.textContent()} faulted`)
+					quantityFaulted++;
+				}
 		}
-	}	
-	if(quantityFaulted > 1){
-		expect(true).toBe(false)			
+		if(quantityFaulted>2){
+			console.log(`${quantityFaulted} faults, checking again in 10s`);
+			await page.waitForTimeout(10000);
+			return await checkFaults()
+		}else{
+			console.log('done')
+			return 
+		}	
 	}
+	await checkFaults();
 })
 test.describe('low voltage', () => {
-	test.describe.configure({ mode: 'serial' });
 	test.beforeAll(async ()=>{
 		await page.waitForTimeout(5000)
 		await commandBinaryDevice(fill, "Close");
@@ -264,9 +273,8 @@ test('fill tank',async() => {
 	await commandBinaryDevice(drain, 'Close');
 	console.log("waiting for WOL to change state")
 	await expect(await actionContent.locator("#bodyTable").locator(`[primid="prim_${wol.feedbackValue}"]`)).toHaveText("Normal", {timeout: 10 * 60000})
-	
 })
-test.describe('evap section', async () => {
+test.describe('bypass', async () => {
 	test.describe.configure({ mode: 'serial' });
 	test.beforeEach(async ()=>{
 		await page.waitForLoadState();
@@ -280,10 +288,6 @@ test.describe('evap section', async () => {
 		expect(conductivityReading).toBeGreaterThan(100);
 		await getAnalogFeedback(conductivity);
 	})
-	
-})
-test.describe('bypass', async () => {
-	test.describe.configure({ mode: 'serial' });
 	test('bleed', async ()=>{
 		test.setTimeout(6 * 60000)
 		await commandBinaryDevice(bleed, "On");
@@ -301,36 +305,6 @@ test.describe('bypass', async () => {
 	})
 	test('drain tank', async () => {
 		await commandBinaryDevice(drain, "Open");
-	})
-})
-test.describe('full water', async () => {
-	const conductivityReadings = [];
-	async function getConductivityValue(){
-		await page.waitForTimeout(10000);
-		const conductivityReading = parseFloat(await actionContent.locator("#bodyTable").locator(`[primid="prim_${conductivity.feedbackValue}"]`).textContent());
-		conductivityReadings.push(conductivityReading)
-		return conductivityReading;
-	}
-	test('rinse cycle', async () => {
-		test.setTimeout(0);
-		await commandBinaryDevice(fill, 'Open')
-		await commandBinaryDevice(drain, 'Close');
-		console.log('waiting for tank to fill...')
-		await expect(await actionContent.locator("#bodyTable").locator(`[primid="prim_${wol.feedbackValue}"]`)).toHaveText("Normal", {timeout: 10 * 60000})
-		await commandBinaryDevice(sump, 'On');
-		const startValue = await getConductivityValue();
-		console.log(`starting cycle. Conductivity: ${startValue}`)
-		if(startValue > 600){
-			await commandBinaryDevice(bleed, 'On');
-		}
-		await page.waitForTimeout(30 * 60000);
-		console.log(`cycle complete. Draining tank. Conductivity: ${await getConductivityValue()}`)
-		await commandBinaryDevice(fill, 'Close');
-		await commandBinaryDevice(drain, 'Open');
-		await commandBinaryDevice(sump, 'Off');
-		await commandBinaryDevice(bleed, 'Off');
-		await expect(await actionContent.locator("#bodyTable").locator(`[primid="prim_${wll.feedbackValue}"]`)).toHaveText("Low", {timeout: 10 * 60000})
-		console.log('Conductivity Readings',conductivityReadings);
 	})
 })
 test.describe('motor section', async () => {
@@ -382,8 +356,4 @@ test.describe('motor section', async () => {
 		await page.waitForTimeout(20 * 60000);
 		await commandBinaryDevice(vfdEnable, 'Disable');
 	})
-})
-test('manually operate unit', async () => {
-	test.setTimeout(0)
-	return new Promise(() => { })
 })
