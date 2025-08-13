@@ -1,7 +1,6 @@
 Set-Location "C:\Users\jsteinca\Documents\Git\playwrightjs"
 # $tests = @("download program", "check faults", "low voltage", "fill tank", "evap section", "motor section")
-# if ($userInput -eq 'n') {
-# }
+
 # npx playwright test tests/alcBypass.spec.js
 npx playwright test alcBypass.spec.js -g "download" 
 npx playwright test alcBypass.spec.js  -g "check faults" 
