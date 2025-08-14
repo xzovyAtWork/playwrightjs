@@ -2,9 +2,7 @@ Set-Location "C:\Users\jsteinca\Documents\Git\playwrightjs"
 # $tests = @("download program", "check faults", "low voltage", "fill tank", "evap section", "motor section")
 
 # npx playwright test tests/alcBypass.spec.js
-$test = alcBypass.spec.js
-npx playwright test $test -g "download" 
-npx playwright test $test  -g "check faults" 
+$test = siemensBypass.spec.js
 $userInput = Read-Host -Prompt "Begin low voltage? (enter 'y' to start)"
 if($userInput -eq 'y'){
 	npx playwright test $test  -g "low voltage" 
