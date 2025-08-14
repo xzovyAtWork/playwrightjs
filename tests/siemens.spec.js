@@ -1,5 +1,15 @@
 import {test, expect} from '@playwright/test';
+import  devices  from '../siemensDevices.js';
 require('log-timestamp')(()=>`${new Date().toLocaleTimeString()}`);
+
+const {wll, whl, wol, leak} = devices
+const {fill, drain} = devices;
+const {faceDamper, bypassDamper} = devices;
+const {primary, secondary} = devices;
+const {sump, bleed, conductivity} = devices;
+const {rh1, rh2, maTemp, saTemp} = devices;
+const {vfd, vfdEnable, vfdFault, vfdHOA, airflow} = devices;
+const {sf1, sf2,sf3, sf4, sf5, sf6} = devices;
 
 let page, context;
 let actionContent
@@ -8,9 +18,10 @@ test.describe.configure({timeout: 0});
 test.beforeAll('login', async ({browser}) => {
 	context = await browser.newContext({ bypassCSP: true });
 	page = await context.newPage();
-	await page.goto('http://192.168.1.100');
+	// await page.goto('chrome-error://chromewebdata/');
 	// await page.getByRole('button', { name: 'Advanced' }).click();
 	// await page.getByRole('link', { name: 'Proceed to 192.168.1.100 (' }).click();
+	await page.goto('http://192.168.1.100');
 	await page.getByRole('textbox', { name: 'User name' }).click();
 	await page.getByRole('textbox', { name: 'User name' }).fill('AHUmfg');
 	await page.getByRole('textbox', { name: 'Password' }).click();
@@ -22,52 +33,148 @@ test.beforeAll('login', async ({browser}) => {
 	// actionContent = page.locator("ul.list-group")
 });
 
+test.afterAll(async () => {
+	await page.waitForTimeout(500)
+	await context.close();
+})
+test.beforeEach(async ({ }, testInfo) => {
+	console.log(`🔴 Started ${testInfo.title}...`);
+})
+test.afterEach(async ({ }, testInfo) => {
+	console.log(`✅ Completed test: ${testInfo.title}`);
+});
+
 test.describe('low voltage', ()=>{
 	test('spot leak', async ()=>{
-		await testBinaryInput("WS01", "Off", "On")
+		await testBinaryInput(leak, "Off", "On")
 	})
 	test('fill valve', async ()=>{
-		await testBinaryIO("LCV01", "Close", "Open")
+		await testBinaryIO(fill, "Close", "Open")
 	})
 	test('drain valve', async ()=>{
-		await testBinaryIO("LCV02", "Close", "Open")
+		await testBinaryIO(drain, "Close", "Open")
 	})
 	test('wll', async ()=>{
-		await testBinaryInput("LL01_LL", "On", "Off")
+		await testBinaryInput(wll, "On", "Off")
 	})
 	test('wol', async ()=>{
-		await testBinaryInput("LN01_NL", "On", "Off")
+		await testBinaryInput(wol, "On", "Off")
 	})
 	test('whl', async ()=>{
-		await testBinaryInput("LH01_HL", "Normal", "Warning")
-	})
-	test("m/a temp", async () => {
-		await getAnalogFeedback("TT02_MAT")
-	})
-	test("face damper", async ()=>{
-		await testAnalogIO("ND01", 0);
-		await testAnalogIO("ND01", 50);
-		await testAnalogIO("ND01", 100);
-	})
-	test("bypass damper", async ()=>{
-		await testAnalogIO("ND02", 0);
-		await testAnalogIO("ND02", 50);
-		await testAnalogIO("ND02", 100);
+		await testBinaryInput(whl, "Normal", "Warning")
 	})
 	test("rh1", async () => {
-		await getAnalogFeedback("NT01_SAH")
+		await getAnalogFeedback(rh1)
 	})
 	test("rh2", async () => {
-		await getAnalogFeedback("NT02_SAH")
+		await getAnalogFeedback(rh2)
 	})
 	test("s/a temp", async () => {
-		await getAnalogFeedback("TT01_SAT")
+		await getAnalogFeedback(saTemp)
+	})
+	test("m/a temp", async () => {
+		await getAnalogFeedback(maTemp)
+	})
+	test("face damper", async ()=>{
+		await testAnalogIO(faceDamper, 0);
+		await testAnalogIO(faceDamper, 50);
+		await testAnalogIO(faceDamper, 100);
+	})
+	test("bypass damper", async ()=>{
+		await testAnalogIO(bypassDamper, 0);
+		await testAnalogIO(bypassDamper, 50);
+		await testAnalogIO(bypassDamper, 100);
+	})
+})
+test("fill tank", async()=> {
+	await commandBinaryDevice(fill, "Open")
+	await commandBinaryDevice(drain, "Close")
+	console.log("waiting for WOL to change state...")
+	await getBinaryFeedback(wol, "On")
+})
+test.describe("bypass", ()=> {
+	test("sump current switch", async ()=> {
+		await commandBinaryDevice(sump, "On");
+		await testBinaryInput(sump, "Off", "On")
+	})
+	test("conductivity", async () => {
+		await getAnalogFeedback(conductivity)
+	})
+	test("bleed", async () => {
+		await commandBinaryDevice(bleed, "On")
+		await page.waitForTimeout(5 * 60000);
+		console.log('bleed on for 5 minutes');
+		await commandBinaryDevice(bleed, "Off");
+		console.log('bleed off. turn off main water supply')
+	})
+	test('run bypass', async ()=>{
+		test.setTimeout(31 * 60000)
+		console.log('running bypass for additional 25 minutes')
+		await page.waitForTimeout(25 * 60000);
+		await commandBinaryDevice(sump, "Off");
+		console.log('bypass test done. check for leaks')
+	})
+	test('drain tank', async () => {
+		await commandBinaryDevice(drain, "Open");
+	})
+})
+
+test.describe('motor section', async () => {
+	test('secondary power status', async() => {
+		await testBinaryInput(secondary, 'Off', 'On');
+	})
+	test('primary power status', async() => {
+		await testBinaryInput(primary, 'On', 'Off')
+	})
+	test('vfd fault', async () => {
+		await testBinaryInput(vfdFault, 'Off', 'On');
+	})
+	test('motor current switches', async () => {
+		const fans = [sf1, sf2, sf3, sf4, sf5, sf6]
+		for(const fan of fans){
+			console.log(fan.name)
+			await testBinaryInput(fan, 'Off', 'On');
+		}
+	})	
+	test('vfd HOA', async () => {
+		test.setTimeout(10 * 60000);
+		await testBinaryInput(vfdHOA, 'Off', 'On');
+	})
+
+	test('vfd feedback and airflow', async () => {
+		test.setTimeout(0);
+		await commandBinaryDevice(vfdEnable, 'On')
+		const getAirflowReading = async () => {
+			getAnalogFeedback(airflow)
+		}
+		await testAnalogIO(vfd, 0);
+		console.log(await getAirflowReading())
+		await testAnalogIO(vfd, 25);
+		console.log(await getAirflowReading())
+		await testAnalogIO(vfd, 50);
+		console.log(await getAirflowReading())
+		await testAnalogIO(vfd, 75);
+		console.log(await getAirflowReading())
+		await testAnalogIO(vfd, 100);
+		await page.waitForTimeout(3000);
+		let final = await getAirflowReading()
+		expect(final).toBeGreaterThanOrEqual(45000);
+		await page.waitForTimeout(3000);
+	})
+	test('run fans and test VFD enable', async () => {
+		test.setTimeout(0)
+		console.log('running fans for 30 minutes')
+		await page.waitForTimeout(20 * 60000);
+		await commandBinaryDevice(vfdEnable, 'Disable');
 	})
 })
 
 
+
+
 async function getBinaryFeedback (device, state){
 	await expect(page.locator("ul.list-group").locator("div", {hasText: device}).first().locator("div.text-primary")).toContainText(state);
+	console.log(`${device}: ${state}`)
 }
 async function commandBinaryDevice(device, value){
 	console.log(`commanding ${device}: ${state}`)
@@ -147,6 +254,4 @@ async function testAnalogIO(device, value){
 			feedback = await await page.locator("ul.list-group").locator("div", {hasText: device + "_FB"}).first().locator("div.text-primary").textContent();
 			await new Promise(r => setTimeout(r, 7000));
 		}
-
 }
-
