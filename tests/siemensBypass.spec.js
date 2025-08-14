@@ -91,14 +91,14 @@ test.describe('low voltage', ()=>{
 	})
 })
 test("fill tank", async()=> {
-	await commandBinaryDevice(fill+ "_OC", "Open")
+	await commandBinaryDevice(fill, "Open")
 	await commandBinaryDevice(drain, "Open")
 	console.log("waiting for WOL to change state...")
 	await getBinaryInput(wol, "On")
 })
 test.describe("bypass", ()=> {
 	test("sump current switch", async ()=> {
-		await commandBinaryDevice(sump + "_SS", "On");
+		await commandBinaryDevice(sump, "On");
 		await testBinaryInput(sump, "Off", "On")
 	})
 	test("conductivity", async () => {
@@ -173,6 +173,11 @@ test.describe('motor section', async () => {
 	})
 })
 
+test("close dampers", async ()=>{
+	await commandAnalogDevice(faceDamper, 0)
+	await commandAnalogDevice(bypassDamper, 0)
+})
+
 
 
 
@@ -197,10 +202,11 @@ async function commandBinaryDevice(device, value){
 	console.log(`${name}: ${value}`)
 }
 async function testBinaryInput(device, state1, state2){
+	const {name, commandValue, feedbackValue} = device;
 	await getBinaryInput(device, state1)
-	console.log(`${device}: ${state1} Waiting for state change...`);
+	console.log(`${name}: ${state1} Waiting for state change...`);
 	await getBinaryInput(device, state2)
-	console.log(`${device}: ${state2}`)
+	console.log(`${name}: ${state2}`)
 }
 async function testBinaryIO(device, state1, state2){
 	await commandBinaryDevice(device, state1)

@@ -15,14 +15,14 @@ export const devices = {
 	saTemp: new Device("TT01", "SAT"),
 	maTemp: new Device("TT02", "MAT"),
 	
-	faceDamper: new Device("ND01"),
-	bypassDamper: new Device("ND02"),
+	faceDamper: new Device("ND01", "FB", "CMD"),
+	bypassDamper: new Device("ND02", "FB", "CMD"),
 	
 	whl: new Device("LH01_HL"),
 	wol: new Device("LN01_NL"),
 	wll: new Device("LL01_LL"),
 	
-	leak: new Device("WS01"),
+	leak: new Device("WS01", "WD"),
 	
 	sump: new Device("EP01", "STS", "SS"),
 	conductivity: new Device("CT01_CON"),
