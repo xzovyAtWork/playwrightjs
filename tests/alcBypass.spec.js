@@ -117,7 +117,7 @@ test.describe('low voltage', () => {
 		await commandAnalogDevice(faceDamper, 20);
 		await commandAnalogDevice(bypassDamper, 100);
 	})
-	test('mech gallery leak / mpdc', async () => {
+	test('leak', async () => {
 		test.setTimeout(60000);
 		const mpdc = testBinaryInput(leak1, 'Normal', 'Alarm');
 		const mechGalleryLeak = testBinaryInput(leak2, 'Normal', 'Alarm');
