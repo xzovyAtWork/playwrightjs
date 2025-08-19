@@ -1,5 +1,5 @@
 import { test, expect, Page, Context} from '@playwright/test';
-import {devices} from "../alcDevices";
+import {devices} from "./alc/alcDevices";
 require('log-timestamp')(()=>`${new Date().toLocaleTimeString()}`);
 
 const {wll, whl, wol, leak1, leak2} = devices

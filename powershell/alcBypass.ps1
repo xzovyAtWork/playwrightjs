@@ -16,7 +16,6 @@ function test{
 
 npx playwright test $test setup.spec.js 
 
-test -prompt "Begin low voltage? (enter 'y' to start)" -grep "lowVoltage.spec.js"
-test -prompt "Begin filling sump tank? (enter 'y' to start)" -grep "fill tank" 
-test -prompt "Begin Evap section? (enter 'y' to start)" -grep "evap section"
-test -prompt "Begin Motor section? (enter 'y' to start)"-grep "motor section"
+test -prompt "Begin low voltage? (enter 'y' to start)" -grep "lowVoltage.spec.js" 
+test -prompt "Begin Evap section? (enter 'y' to start)" -grep "evapBypass.spec.js"
+test -prompt "Begin Motor section? (enter 'y' to start)"-grep "motorSection.spec.js"

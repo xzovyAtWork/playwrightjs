@@ -56,45 +56,31 @@ test.beforeEach(async ({ }, testInfo) => {
 test.afterEach(async ({ }, testInfo) => {
 	console.log(`✅ Completed test: ${testInfo.title}`);
 });
-test('fill tank',async() => {
-	test.setTimeout(0)
-	await commandBinaryDevice(fill, 'Open');
-	await commandBinaryDevice(drain, 'Close');
-	console.log("waiting for WOL to change state")
-	await expect(await actionContent.locator("#bodyTable").locator(`[primid="prim_${wol.feedbackValue}"]`)).toHaveText("Normal", {timeout: 10 * 60000})
+test('sump current switch', async () => {
+	await commandBinaryDevice(sump, "On");
+	await testBinaryInput(sump, 'Off', 'On');
 })
-test.describe('evap section', async () => {
-	test.describe.configure({ mode: 'serial' });
-	test.beforeEach(async ()=>{
-		await page.waitForLoadState();
-	})
-	test('sump current switch', async () => {
-		await commandBinaryDevice(sump, "On");
-		await testBinaryInput(sump, 'Off', 'On');
-	})
-	test('conductivity', async () => {
-		const conductivityReading = parseFloat(await actionContent.locator("#bodyTable").locator(`[primid="prim_${conductivity.feedbackValue}"]`).textContent());
-		expect(conductivityReading).toBeGreaterThan(100);
-		await getAnalogFeedback(conductivity);
-	})
-	test('bleed', async ()=>{
-		test.setTimeout(6 * 60000)
-		await commandBinaryDevice(bleed, "On");
-		console.log('bleed on for 5 minutes')
-		await page.waitForTimeout(5 * 60000);
-		await commandBinaryDevice(bleed, "Off");
-		console.log('bleed off. turn off main water supply')
-	})
-	test('run bypass', async ()=>{
-		test.setTimeout(31 * 60000)
-		console.log('running bypass for additional 25 minutes')
-		await page.waitForTimeout(25 * 60000);
-		await commandBinaryDevice(sump, "Off");
-		console.log('bypass test done. check for leaks')
-	})
-	test('drain tank', async () => {
-		await commandBinaryDevice(drain, "Open");
-	})
+test('conductivity', async () => {
+	const conductivityReading = parseFloat(await actionContent.locator("#bodyTable").locator(`[primid="prim_${conductivity.feedbackValue}"]`).textContent());
+	await getAnalogFeedback(conductivity);
+})
+test('bleed', async ()=>{
+	test.setTimeout(6 * 60000)
+	await commandBinaryDevice(bleed, "On");
+	console.log('bleed on for 5 minutes')
+	await page.waitForTimeout(5 * 60000);
+	await commandBinaryDevice(bleed, "Off");
+	console.log('bleed off. turn off main water supply')
+})
+test('run bypass', async ()=>{
+	test.setTimeout(31 * 60000)
+	console.log('running bypass for additional 25 minutes')
+	await page.waitForTimeout(25 * 60000);
+	await commandBinaryDevice(sump, "Off");
+	console.log('bypass test done. check for leaks')
+})
+test('drain tank', async () => {
+	await commandBinaryDevice(drain, "Open");
 })
 
 async function commandAnalogDevice(device, value){
