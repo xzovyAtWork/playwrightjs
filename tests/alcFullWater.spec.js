@@ -191,29 +191,17 @@ test.describe('evap section', async () => {
 		expect(conductivityReading).toBeGreaterThan(100);
 		await getAnalogFeedback(conductivity);
 	})
-	
-})
-test.describe('bypass', async () => {
-	test.describe.configure({ mode: 'serial' });
 	test('bleed', async ()=>{
 		test.setTimeout(6 * 60000)
 		await commandBinaryDevice(bleed, "On");
-		console.log('bleed on for 5 minutes')
-		await page.waitForTimeout(5 * 60000);
+		console.log('bleed on for 2 minutes')
+		await page.waitForTimeout(2 * 60000);
 		await commandBinaryDevice(bleed, "Off");
 		console.log('bleed off. turn off main water supply')
 	})
-	test('run bypass', async ()=>{
-		test.setTimeout(31 * 60000)
-		console.log('running bypass for additional 25 minutes')
-		await page.waitForTimeout(25 * 60000);
-		await commandBinaryDevice(sump, "Off");
-		console.log('bypass test done. check for leaks')
-	})
-	test('drain tank', async () => {
-		await commandBinaryDevice(drain, "Open");
-	})
+	
 })
+
 test.describe('full water', async () => {
 	const conductivityReadings = [];
 	async function getConductivityValue(){
@@ -231,17 +219,14 @@ test.describe('full water', async () => {
 		await commandBinaryDevice(sump, 'On');
 		const startValue = await getConductivityValue();
 		console.log(`starting cycle. Conductivity: ${startValue}`)
-		if(startValue > 600){
-			await commandBinaryDevice(bleed, 'On');
-		}
 		await page.waitForTimeout(30 * 60000);
 		console.log(`cycle complete. Draining tank. Conductivity: ${await getConductivityValue()}`)
 		await commandBinaryDevice(fill, 'Close');
 		await commandBinaryDevice(drain, 'Open');
 		await commandBinaryDevice(sump, 'Off');
 		await commandBinaryDevice(bleed, 'Off');
-		await expect(await actionContent.locator("#bodyTable").locator(`[primid="prim_${wll.feedbackValue}"]`)).toHaveText("Low", {timeout: 10 * 60000})
-		console.log('Conductivity Readings',conductivityReadings);
+		await expect(await actionContent.locator("#bodyTable").locator(`[primid="prim_${wll.feedbackValue}"]`)).toHaveText("Low", {timeout: 0})
+		console.log('Conductivity Readings', conductivityReadings);
 	})
 })
 test.describe('motor section', async () => {
@@ -327,12 +312,12 @@ async function commandBinaryDevice(device, state, attempt = 1){
 		}catch(err){
 				let el = await actionContent.locator('div.ControlLightDropList-WidgetLightDropList-rowinactive').getByText(state, {timeout: 2000}).nth(1)
 				await el.click();
-				console.log(e)
+				
 			}
 			await expect(actionContent.locator("#bodyTable").locator(`[primid="prim_${commandValue}"]`)).toHaveText(state, {timeout: 2000})
 			
 	}catch(err){
-		if(attempt >3 ){
+		if(attempt > 3 ){
 			console.log(`commanding ${device.name} failed, aborting`);
 			return ;
 		}

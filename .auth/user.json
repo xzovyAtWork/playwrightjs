@@ -1,0 +1,35 @@
+{
+  "cookies": [
+    {
+      "name": "JSESSIONID",
+      "value": "629C632D5E4BA1F46882F732147A9705",
+      "domain": "localhost",
+      "path": "/",
+      "expires": -1,
+      "httpOnly": true,
+      "secure": false,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "JSESSIONIDSSO",
+      "value": "E2CA205411A1D817FABA944054E775C5",
+      "domain": "localhost",
+      "path": "/",
+      "expires": -1,
+      "httpOnly": true,
+      "secure": false,
+      "sameSite": "Lax"
+    }
+  ],
+  "origins": [
+    {
+      "origin": "http://localhost:8080",
+      "localStorage": [
+        {
+          "name": "cjAutoScale",
+          "value": "false"
+        }
+      ]
+    }
+  ]
+}

@@ -1,5 +1,5 @@
 import { test, expect, Page, Context} from '@playwright/test';
-import {devices} from "../alcDevices";
+import {devices} from "./alcDevices";
 require('log-timestamp')(()=>`${new Date().toLocaleTimeString()}`);
 
 const {wll, whl, wol, leak1, leak2} = devices
@@ -11,16 +11,11 @@ const {rh1, rh2, maTemp, saTemp} = devices;
 const {vfd, vfdEnable, vfdFault, vfdHOA, airflow} = devices;
 const {sf1, sf2,sf3, sf4, sf5, sf6} = devices;
 
-
 let page;
 let context;
 let actionContent;
 
-
-
-
 test.describe.configure({timeout: 10 * 60000})
-// test.describe.configure({mode: "parallel"})
 test.beforeAll('log in', async ({ browser }) => {
 
 	console.log('logging in to ALC...')
@@ -61,189 +56,6 @@ test.beforeEach(async ({ }, testInfo) => {
 test.afterEach(async ({ }, testInfo) => {
 	console.log(`✅ Completed test: ${testInfo.title}`);
 });
-test('download program', async ({ browser }) => {
-	// test.describe.configure({retries: 3})
-	test.setTimeout(10 * 60000)
-	let text;
-	console.log('downloading controller program...');
-	await page.waitForLoadState();
-	await page.evaluate(() => window.invokeManualCommand('download'));
-	await expect(actionContent.locator("#ch_message_div", {hasText: "Downloading"})).toBeVisible();
-	while(await actionContent.locator("#ch_message_div", {hasText: "Downloading"}).isVisible()){
-		text = await actionContent.locator("#ch_message_div").first().textContent();
-		console.log(`${text}`);
-		await page.waitForTimeout(5000);
-	}
-	await expect(actionContent.locator("#ch_message_div", {hasText: "Downloading"})).not.toBeVisible()
-	await expect(actionContent.locator("#ch_message_div").first()).not.toBeVisible()
-	console.log(text)
-	console.log('program download complete');
-})
-test('check faults', async () =>{
-	// test.describe.configure({retries: 3})
-	const rows = await actionContent.locator('#bodyTable').locator('tr')
-	let quantityFaulted = 0
-	for(let i = 0; i < 58; ++i){
-		let firstColumn = await actionContent.locator('#bodyTable').locator('tr').nth(i).locator('td').first().locator('span')
-		const color = await firstColumn.evaluate(el =>
-			window.getComputedStyle(el).getPropertyValue('color')
-		  );
-		if(color == 'rgb(255, 0, 0)'){
-			console.log(`${await firstColumn.textContent()} faulted`)
-			quantityFaulted++;
-		}
-	}	
-	if(quantityFaulted > 1){
-		expect(true).toBe(false)			
-	}
-})
-test.describe('low voltage', () => {
-	test.describe.configure({ mode: 'serial' });
-	test.beforeAll(async ()=>{
-		await page.waitForTimeout(5000)
-		await commandBinaryDevice(fill, "Close");
-		await commandBinaryDevice(drain, "Close");
-		await commandBinaryDevice(bleed, "Off");
-		await commandBinaryDevice(sump, "Off");
-		await commandBinaryDevice(vfdEnable, "Disable");
-		await commandAnalogDevice(vfd, 0);
-		await commandAnalogDevice(faceDamper, 20);
-		await commandAnalogDevice(bypassDamper, 100);
-	})
-	test('mech gallery leak / mpdc', async () => {
-		test.setTimeout(60000);
-		const mpdc = testBinaryInput(leak1, 'Normal', 'Alarm');
-		const mechGalleryLeak = testBinaryInput(leak2, 'Normal', 'Alarm');
-		try {
-			await Promise.any([mechGalleryLeak, mpdc]);
-		} catch (err) {
-			console.error('Both tests failed, aborting...');
-			throw err;
-		}
-	});
-	test('fill actuator', async () => {
-		expect(await actionContent.locator("#bodyTable").locator(`[primid="prim_${fill.feedbackValue}"]`)).toHaveText("Open", {timeout: 10 * 60000})
-		await testBinaryIO(fill, "Open");
-		await testBinaryIO(fill, "Close");
-	})
-	test('drain actuator', async () => {
-		expect(await actionContent.locator("#bodyTable").locator(`[primid="prim_${drain.feedbackValue}"]`)).toHaveText("Close", {timeout: 10 * 60000})
-		await testBinaryIO(drain, "Open");
-		await testBinaryIO(drain , "Close");
-	})
-	test('wll', async () => {
-		await testBinaryInput(wll, 'Low', 'Normal');
-	})
-	test('wol', async () => {
-		await testBinaryInput(wol, 'Low', 'Normal');
-	})
-	test('whl', async () => {
-		await testBinaryInput(whl, 'Normal', 'Alarm');
-	})
-	test('ma temp', async ()=>{
-		await getAnalogFeedback(maTemp)
-	})
-	test('rh1', async ()=>{
-		await getAnalogFeedback(rh1)
-	})
-	test('rh2', async ()=>{
-		await getAnalogFeedback(rh2)
-	})
-	test('sa temp', async ()=>{
-		let value = parseFloat(await actionContent.locator("#bodyTable").locator(`[primid="prim_${saTemp.feedbackValue}"]`).textContent())
-		test.skip( value < 0,`${saTemp.name} faulty`);
-		await getAnalogFeedback(saTemp)
-	})
-	test('face damper', async () => {
-		test.setTimeout(5 * 60000);
-		await testAnalogIO(faceDamper, 20);
-		await testAnalogIO(faceDamper, 50);
-		await testAnalogIO(faceDamper, 100);
-		await commandAnalogDevice(faceDamper, 20);
-	})
-	test('bypass damper', async () => {
-		test.setTimeout(5 * 60000)
-		await testAnalogIO(bypassDamper, 100);
-		await testAnalogIO(bypassDamper, 50);
-		await testAnalogIO(bypassDamper, 20);
-		await commandAnalogDevice(bypassDamper, 100)
-	})
-})
-test('fill tank',async() => {
-	test.setTimeout(0)
-	await commandBinaryDevice(fill, 'Open');
-	await commandBinaryDevice(drain, 'Close');
-	console.log("waiting for WOL to change state")
-	await expect(await actionContent.locator("#bodyTable").locator(`[primid="prim_${wol.feedbackValue}"]`)).toHaveText("Normal", {timeout: 10 * 60000})
-	
-})
-test.describe('evap section', async () => {
-	test.describe.configure({ mode: 'serial' });
-	test.beforeEach(async ()=>{
-		await page.waitForLoadState();
-	})
-	test('sump current switch', async () => {
-		await commandBinaryDevice(sump, "On");
-		await testBinaryInput(sump, 'Off', 'On');
-	})
-	test('conductivity', async () => {
-		const conductivityReading = parseFloat(await actionContent.locator("#bodyTable").locator(`[primid="prim_${conductivity.feedbackValue}"]`).textContent());
-		expect(conductivityReading).toBeGreaterThan(100);
-		await getAnalogFeedback(conductivity);
-	})
-	
-})
-test.describe('bypass', async () => {
-	test.describe.configure({ mode: 'serial' });
-	test('bleed', async ()=>{
-		test.setTimeout(6 * 60000)
-		await commandBinaryDevice(bleed, "On");
-		console.log('bleed on for 5 minutes')
-		await page.waitForTimeout(5 * 60000);
-		await commandBinaryDevice(bleed, "Off");
-		console.log('bleed off. turn off main water supply')
-	})
-	test('run bypass', async ()=>{
-		test.setTimeout(31 * 60000)
-		console.log('running bypass for additional 25 minutes')
-		await page.waitForTimeout(25 * 60000);
-		await commandBinaryDevice(sump, "Off");
-		console.log('bypass test done. check for leaks')
-	})
-	test('drain tank', async () => {
-		await commandBinaryDevice(drain, "Open");
-	})
-})
-test.describe('full water', async () => {
-	const conductivityReadings = [];
-	async function getConductivityValue(){
-		await page.waitForTimeout(10000);
-		const conductivityReading = parseFloat(await actionContent.locator("#bodyTable").locator(`[primid="prim_${conductivity.feedbackValue}"]`).textContent());
-		conductivityReadings.push(conductivityReading)
-		return conductivityReading;
-	}
-	test('rinse cycle', async () => {
-		test.setTimeout(0);
-		await commandBinaryDevice(fill, 'Open')
-		await commandBinaryDevice(drain, 'Close');
-		console.log('waiting for tank to fill...')
-		await expect(await actionContent.locator("#bodyTable").locator(`[primid="prim_${wol.feedbackValue}"]`)).toHaveText("Normal", {timeout: 10 * 60000})
-		await commandBinaryDevice(sump, 'On');
-		const startValue = await getConductivityValue();
-		console.log(`starting cycle. Conductivity: ${startValue}`)
-		if(startValue > 600){
-			await commandBinaryDevice(bleed, 'On');
-		}
-		await page.waitForTimeout(30 * 60000);
-		console.log(`cycle complete. Draining tank. Conductivity: ${await getConductivityValue()}`)
-		await commandBinaryDevice(fill, 'Close');
-		await commandBinaryDevice(drain, 'Open');
-		await commandBinaryDevice(sump, 'Off');
-		await commandBinaryDevice(bleed, 'Off');
-		await expect(await actionContent.locator("#bodyTable").locator(`[primid="prim_${wll.feedbackValue}"]`)).toHaveText("Low", {timeout: 10 * 60000})
-		console.log('Conductivity Readings',conductivityReadings);
-	})
-})
 test.describe('motor section', async () => {
 	test.describe.configure({ mode: 'serial' });
 	test('secondary power status', async() => {
@@ -294,10 +106,6 @@ test.describe('motor section', async () => {
 		await commandBinaryDevice(vfdEnable, 'Disable');
 	})
 })
-test('manually operate unit', async () => {
-	test.setTimeout(0)
-	return new Promise(() => { })
-})
 
 async function commandAnalogDevice(device, value){
 	const { lockedValue, commandValue } = device
@@ -340,6 +148,7 @@ async function commandBinaryDevice(device, state, attempt = 1){
 		commandBinaryDevice(device, state, attempt+=1);
 	}
 };
+
 async function getAnalogFeedback(device){
 	const {feedbackValue} = device
 	let result;

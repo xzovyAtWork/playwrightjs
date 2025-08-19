@@ -1,6 +1,8 @@
 Set-Location "C:\Users\$env:USERNAME\Documents\Git\playwrightjs"
+# $tests = @("download program", "check faults", "low voltage", "fill tank", "evap section", "motor section")
 
-$test = "tests\alc"
+# npx playwright test tests/alcBypass.spec.js
+$test = "tests/alcFullWater.spec.js"
 
 function test{
 	param(
@@ -10,13 +12,14 @@ function test{
 	$userInput = Read-Host -Prompt $prompt
 	Write-Host $grep
 	if($userInput -eq 'y'){
-		npx playwright test $test $grep
+		npx playwright test $test -g $grep
 	}
 }
 
-npx playwright test $test setup.spec.js 
+npx playwright test $test -g "download" 
+npx playwright test $test  -g "check faults" 
 
-test -prompt "Begin low voltage? (enter 'y' to start)" -grep "lowVoltage.spec.js"
+test -prompt "Begin low voltage? (enter 'y' to start)" -grep "low voltage"
 test -prompt "Begin filling sump tank? (enter 'y' to start)" -grep "fill tank" 
 test -prompt "Begin Evap section? (enter 'y' to start)" -grep "evap section"
 test -prompt "Begin Motor section? (enter 'y' to start)"-grep "motor section"
