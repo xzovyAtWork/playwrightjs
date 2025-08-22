@@ -18,14 +18,14 @@ export const devices = {
 	faceDamper: new Device("ND01", "FB", "CMD"),
 	bypassDamper: new Device("ND02", "FB", "CMD"),
 	
-	whl: new Device("LH01_HL"),
-	wol: new Device("LN01_NL"),
-	wll: new Device("LL01_LL"),
+	whl: new Device("LH01", "HL"),
+	wol: new Device("LN01", "NL"),
+	wll: new Device("LL01", "LL"),
 	
 	leak: new Device("WS01", "WD"),
 	
 	sump: new Device("EP01", "STS", "SS"),
-	conductivity: new Device("CT01_CON"),
+	conductivity: new Device("CT01", "CON"),
 	bleed: new Device("CCV01", undefined, "OC"),
 	
 	sf1: new Device("SF01", "STS"),

@@ -1,5 +1,5 @@
 import {test, expect} from '@playwright/test';
-import  {devices}  from '../siemensDevices.js';
+import {devices} from "./siemensDevices.js"
 require('log-timestamp')(()=>`${new Date().toLocaleTimeString()}`);
 
 const {wll, whl, wol, leak} = devices
@@ -256,20 +256,20 @@ async function commandAnalogDevice(device, value){
 }
 
 async function testAnalogIO(device, value){
-
+	const {name, commandValue, feedbackValue} = device;
 	await commandAnalogDevice(device, value);
 	let result;
-	await page.locator("ul.list-group").locator("div", {hasText: device}).first().locator("div.text-primary").scrollIntoViewIfNeeded();
+	await page.locator("ul.list-group").locator("div", {hasText: feedbackValue}).first().locator("div.text-primary").scrollIntoViewIfNeeded();
 	for (let i = 0; i < 400; i++) {
-		let feedback =  await page.locator("ul.list-group").locator("div", {hasText: device}).first().locator("div.text-primary").textContent();
+		let feedback =  await page.locator("ul.list-group").locator("div", {hasText: feedbackValue}).first().locator("div.text-primary").textContent();
 		result = parseFloat(feedback);
 		if (Math.abs(value - result) <= 5 ) {
 			await page.waitForTimeout(5000);
-			feedback = await page.locator("ul.list-group").locator("div", {hasText: device}).first().locator("div.text-primary").textContent();
-			console.log(`${device} feedback: ${feedback}`);
-			break;
+			feedback = await page.locator("ul.list-group").locator("div", {hasText: feedbackValue}).first().locator("div.text-primary").textContent();
+			console.log(`${name} feedback: ${feedback}`);
+			break;	
 		}
-		feedback = await await page.locator("ul.list-group").locator("div", {hasText: device}).first().locator("div.text-primary").textContent();
+		feedback = await await page.locator("ul.list-group").locator("div", {hasText: feedbackValue}).first().locator("div.text-primary").textContent();
 		await new Promise(r => setTimeout(r, 7000));
 	}
 }
