@@ -1,5 +1,5 @@
 import { test, expect, Page, Context} from '@playwright/test';
-import {devices} from "./alcDevices";
+import { devices } from './alcDevices';
 require('log-timestamp')(()=>`${new Date().toLocaleTimeString()}`);
 
 const {wll, whl, wol, leak1, leak2} = devices
@@ -56,6 +56,51 @@ test.beforeEach(async ({ }, testInfo) => {
 test.afterEach(async ({ }, testInfo) => {
 	console.log(`✅ Completed test: ${testInfo.title}`);
 });
+test('download program', async () => {
+	await page.waitForTimeout(2000);
+	let saValue = await actionContent.locator("#bodyTable").locator(`[primid="prim_${saTemp.feedbackValue}"]`).textContent()
+	test.skip(saValue !== '?', "Program already downloaded")
+	test.setTimeout(10 * 60000)
+	let text;
+	console.log('downloading controller program...');
+	await page.waitForLoadState();
+	await page.evaluate(() => window.invokeManualCommand('download'));
+	await expect(actionContent.locator("#ch_message_div", {hasText: "Downloading"})).toBeVisible({timeout: 5000});
+	while(await actionContent.locator("#ch_message_div", {hasText: "Downloading"}).isVisible()){
+		text = await actionContent.locator("#ch_message_div").first().textContent();
+		console.log(`${text}`);
+		await page.waitForTimeout(5000);
+	}
+	await expect(actionContent.locator("#ch_message_div", {hasText: "Downloading"})).not.toBeVisible()
+	console.log(await actionContent.locator("#ch_message_div").first().textContent())
+	await expect(await actionContent.locator("#ch_message_div").first()).not.toBeVisible({timeout: 5000})
+	console.log(text)
+	console.log('program download complete');
+})
+test('check faults', async () =>{
+	async function checkFaults(quantityFaulted = 0){
+
+		for(let i = 0; i < 58; ++i){
+			let firstColumn = await actionContent.locator('#bodyTable').locator('tr').nth(i).locator('td').first().locator('span')
+			const color = await firstColumn.evaluate(el =>
+				window.getComputedStyle(el).getPropertyValue('color')
+				);
+				if(color == 'rgb(255, 0, 0)'){
+					console.log(`${await firstColumn.textContent()} faulted`)
+					quantityFaulted++;
+				}
+		}
+		if(quantityFaulted>2){
+			console.log(`${quantityFaulted} faults, checking again in 10s`);
+			await page.waitForTimeout(10000);
+			return await checkFaults()
+		}else{
+			console.log('done')
+			return 
+		}	
+	}
+	await checkFaults();
+})
 
 test.describe('low voltage', () => {
 	test.beforeAll(async ()=>{
@@ -129,7 +174,85 @@ test.describe('low voltage', () => {
 	})
 })
 
+test.describe("evap section", ()=> {
+	test('sump current switch', async () => {
+		await commandBinaryDevice(sump, "On");
+		await testBinaryInput(sump, 'Off', 'On');
+	})
+	test('conductivity', async () => {
+		const conductivityReading = parseFloat(await actionContent.locator("#bodyTable").locator(`[primid="prim_${conductivity.feedbackValue}"]`).textContent());
+		await getAnalogFeedback(conductivity);
+	})
+	test('bleed', async ()=>{
+		test.setTimeout(6 * 60000)
+		await commandBinaryDevice(bleed, "On");
+		console.log('bleed on for 5 minutes')
+		await page.waitForTimeout(5 * 60000);
+		await commandBinaryDevice(bleed, "Off");
+		console.log('bleed off. turn off main water supply')
+	})
+	test('run bypass', async ()=>{
+		test.setTimeout(31 * 60000)
+		console.log('running bypass for additional 25 minutes')
+		await page.waitForTimeout(25 * 60000);
+		await commandBinaryDevice(sump, "Off");
+		console.log('bypass test done. check for leaks')
+	})
+	test('drain tank', async () => {
+		await commandBinaryDevice(drain, "Open");
+	})
+})
 
+test.describe('motor section', async () => {
+	test.describe.configure({ mode: 'serial' });
+	test('secondary power status', async() => {
+		await testBinaryInput(secondary, 'Off', 'On');
+	})
+	test('primary power status', async() => {
+		await testBinaryInput(primary, 'On', 'Off')
+	})
+	test('vfd fault', async () => {
+		await testBinaryInput(vfdFault, 'Off', 'On');
+	})
+	test('motor current switches', async () => {
+		const fans = [sf1, sf2, sf3, sf4, sf5, sf6]
+		for(const fan of fans){
+			console.log(fan.name)
+			await testBinaryInput(fan, 'On', 'Off');
+		}
+	})	
+	test('vfd HOA', async () => {
+		test.setTimeout(10 * 60000);
+		await testBinaryInput(vfdHOA, 'Off', 'On');
+	})
+
+	test('vfd feedback and airflow', async () => {
+		test.setTimeout(0);
+		await commandBinaryDevice(vfdEnable, 'Enable')
+		const getAirflowReading = async () => {
+			return parseFloat(await actionContent.locator("#bodyTable").locator(`[primid="prim_${airflow.feedbackValue}"]`).textContent())
+		}
+		await testAnalogIO(vfd, 0);
+		console.log(await getAirflowReading())
+		await testAnalogIO(vfd, 25);
+		console.log(await getAirflowReading())
+		await testAnalogIO(vfd, 50);
+		console.log(await getAirflowReading())
+		await testAnalogIO(vfd, 75);
+		console.log(await getAirflowReading())
+		await testAnalogIO(vfd, 100);
+		await page.waitForTimeout(3000);
+		let final = await getAirflowReading()
+		expect(final).toBeGreaterThanOrEqual(45000);
+		await page.waitForTimeout(3000);
+	})
+	test('run fans and test VFD enable', async () => {
+		test.setTimeout(0)
+		console.log('running fans for 30 minutes')
+		await page.waitForTimeout(20 * 60000);
+		await commandBinaryDevice(vfdEnable, 'Disable');
+	})
+})
 async function commandAnalogDevice(device, value){
 	const { lockedValue, commandValue } = device
 	try{

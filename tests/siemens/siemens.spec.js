@@ -76,8 +76,7 @@ test.describe('low voltage', ()=>{
 	})
 	
 	test("m/a temp", async () => {
-		let value = await testAnalogInput(maTemp);
-	
+		await testAnalogInput(maTemp);
 	})
 	test("face damper", async ()=>{
 		await testAnalogIO(faceDamper, 0);
@@ -125,7 +124,7 @@ test.describe("bypass", ()=> {
 
 test.describe('motor section', async () => {
 	test('secondary power status', async() => {
-		await testBinaryInput(secondary, 'Off', 'On');
+		await testBinaryInput(secondary, 'On', 'Off');
 	})
 	test('primary power status', async() => {
 		await testBinaryInput(primary, 'On', 'Off')
@@ -173,13 +172,40 @@ test.describe('motor section', async () => {
 	})
 })
 
+test.describe('full water', async () => {
+	const conductivityReadings = [];
+	async function getConductivityValue(){
+		await page.waitForTimeout(10000);
+		const conductivityReading = getAnalogInput(conductivity)
+		conductivityReadings.push(conductivityReading)
+		return conductivityReading;
+	}
+	test('rinse cycle', async () => {
+		test.setTimeout(0);
+		await commandBinaryDevice(fill, 'Open');
+		await commandBinaryDevice(drain, 'Open');
+		await commandAnalogDevice(faceDamper, 100);
+		await commandAnalogDevice(bypassDamper, 0);
+		console.log('waiting for tank to fill...')
+		await getBinaryInput(wol, "On")
+		await commandBinaryDevice(sump, 'On');
+		const startValue = await getConductivityValue();
+		console.log(`starting cycle. Conductivity: ${startValue}`)
+		await page.waitForTimeout(30 * 60000);
+		console.log(`cycle complete. Draining tank. Conductivity: ${await getConductivityValue()}`)
+		await commandBinaryDevice(fill, 'Close');
+		await commandBinaryDevice(drain, 'Open');
+		await commandBinaryDevice(sump, 'Off');
+		await commandBinaryDevice(bleed, 'Off');
+		await getBinaryInput(wll, "Off")
+		console.log('Conductivity Readings', conductivityReadings);
+	})
+})
+
 test("close dampers", async ()=>{
 	await commandAnalogDevice(faceDamper, 0)
 	await commandAnalogDevice(bypassDamper, 0)
 })
-
-
-
 
 async function getBinaryInput (device, state){
 	const {name, commandValue, feedbackValue} = device
