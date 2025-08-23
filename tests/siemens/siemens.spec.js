@@ -42,13 +42,19 @@ test.beforeEach(async ({ }, testInfo) => {
 test.afterEach(async ({ }, testInfo) => {
 	console.log(`✅ Completed test: ${testInfo.title}`);
 });
-
+test("setup", async() => {
+	await commandBinaryDevice(fill, "Close");
+	await commandBinaryDevice(drain, "Open");
+	await commandBinaryDevice(vfdEnable, "Off");
+	await commandAnalogDevice(faceDamper, 100)
+	await commandAnalogDevice(bypassDamper, 0)
+})
 test.describe('low voltage', ()=>{
 	test('spot leak', async ()=>{
 		await testBinaryInput(leak, "Off", "On")
 	})
 	test('fill valve', async ()=>{
-		await testBinaryIO(fill, "Close", "Open")
+		await testBinaryIO(fill, "Open", "Close")
 	})
 	test('drain valve', async ()=>{
 		await testBinaryIO(drain, "Close", "Open")
@@ -95,7 +101,7 @@ test("fill tank", async()=> {
 	console.log("waiting for WOL to change state...")
 	await getBinaryInput(wol, "On")
 })
-test.describe("bypass", ()=> {
+test.describe("evap section", ()=> {
 	test("sump current switch", async ()=> {
 		await commandBinaryDevice(sump, "On");
 		await testBinaryInput(sump, "Off", "On")
@@ -135,7 +141,6 @@ test.describe('motor section', async () => {
 	test('motor current switches', async () => {
 		const fans = [sf1, sf2, sf3, sf4, sf5, sf6]
 		for(const fan of fans){
-			console.log(fan)
 			await testBinaryInput(fan, 'Off', 'On');
 		}
 	})	
@@ -143,12 +148,12 @@ test.describe('motor section', async () => {
 		test.setTimeout(10 * 60000);
 		await testBinaryInput(vfdHOA, 'Off', 'On');
 	})
-
-	test('vfd feedback and airflow', async () => {
+})
+	test('ramp fans', async () => {
 		test.setTimeout(0);
 		await commandBinaryDevice(vfdEnable, 'On')
 		const getAirflowReading = async () => {
-			 parseFloat(await page.locator("ul.list-group").locator("div", {hasText: airflow}).first().locator("div.text-primary").textContent());
+			 parseFloat(await page.locator("ul.list-group").locator("div", {hasText: airflow.feedbackValue}).first().locator("div.text-primary").textContent());
 		}
 		await testAnalogIO(vfd, 0);
 		console.log(await getAirflowReading())
@@ -164,13 +169,13 @@ test.describe('motor section', async () => {
 		expect(final).toBeGreaterThanOrEqual(45000);
 		await page.waitForTimeout(3000);
 	})
-	test('run fans and test VFD enable', async () => {
+	test('run on timer', async () => {
 		test.setTimeout(0)
 		console.log('running fans for 30 minutes')
-		await page.waitForTimeout(20 * 60000);
+		await page.waitForTimeout(30 * 60000);
 		await commandBinaryDevice(vfdEnable, 'Disable');
 	})
-})
+
 
 test.describe('full water', async () => {
 	const conductivityReadings = [];

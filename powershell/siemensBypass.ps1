@@ -1,5 +1,5 @@
 Set-Location "C:\Users\$env:USERNAME\Documents\Git\playwrightjs"
-$test = "tests/siemensBypass.spec.js"
+$test = "tests/siemens/siemens.spec.js"
 
 function test{
 	param(
@@ -13,9 +13,13 @@ function test{
 	}
 }
 
+Write-Host "press enter to skip tests. 'y' to begin test."
+test -prompt "initialize devices for test? (enter 'y' to start)" -grep "setup"
 test -prompt "Begin low voltage? (enter 'y' to start)" -grep "low voltage"
 test -prompt "Begin filling sump tank? (enter 'y' to start)" -grep "fill tank" 
 test -prompt "Begin Evap section? (enter 'y' to start)" -grep "evap section"
-test -prompt "Begin Motor section? (enter 'y' to start)"-grep "motor section"
+test -prompt "Begin Motors and Primary Secondary? (enter 'y' to start)"-grep "motor section"
+test -prompt "Ramp Fans? (enter 'y' to start)"-grep "ramp fans"
+test -prompt "Start fan timer? (enter 'y' to start)"-grep "run on timer"
 test -prompt "Drain tank? (enter 'y' to start)"-grep "drain tank"
 test -prompt "Close dampers? (enter 'y' to start)"-grep "close dampers"

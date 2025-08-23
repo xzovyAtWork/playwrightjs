@@ -16,11 +16,7 @@ let page;
 let context;
 let actionContent;
 
-
-
-
 test.describe.configure({timeout: 10 * 60000})
-// test.describe.configure({mode: "parallel"})
 test.beforeAll('log in', async ({ browser }) => {
 
 	console.log('logging in to ALC...')
