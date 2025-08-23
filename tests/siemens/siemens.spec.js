@@ -152,20 +152,18 @@ test.describe('motor section', async () => {
 	test('ramp fans', async () => {
 		test.setTimeout(0);
 		await commandBinaryDevice(vfdEnable, 'On')
-		const getAirflowReading = async () => {
-			 parseFloat(await page.locator("ul.list-group").locator("div", {hasText: airflow.feedbackValue}).first().locator("div.text-primary").textContent());
-		}
+		
 		await testAnalogIO(vfd, 0);
-		console.log(await getAirflowReading())
+		console.log(await getAnalogInput(airflow))
 		await testAnalogIO(vfd, 25);
-		console.log(await getAirflowReading())
+		console.log(await getAnalogInput(airflow))
 		await testAnalogIO(vfd, 50);
-		console.log(await getAirflowReading())
+		console.log(await getAnalogInput(airflow))
 		await testAnalogIO(vfd, 75);
-		console.log(await getAirflowReading())
+		console.log(await getAnalogInput(airflow))
 		await testAnalogIO(vfd, 100);
 		await page.waitForTimeout(3000);
-		let final = await getAirflowReading()
+		let final = await getAnalogInput(airflow)
 		expect(final).toBeGreaterThanOrEqual(45000);
 		await page.waitForTimeout(3000);
 	})
