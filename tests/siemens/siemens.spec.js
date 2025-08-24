@@ -42,14 +42,18 @@ test.beforeEach(async ({ }, testInfo) => {
 test.afterEach(async ({ }, testInfo) => {
 	console.log(`✅ Completed test: ${testInfo.title}`);
 });
-test("setup", async() => {
-	await commandBinaryDevice(fill, "Close");
-	await commandBinaryDevice(drain, "Open");
-	await commandBinaryDevice(vfdEnable, "Off");
-	await commandAnalogDevice(faceDamper, 100)
-	await commandAnalogDevice(bypassDamper, 0)
-})
+
 test.describe('low voltage', ()=>{
+	
+	test('setup', async () => {
+
+		await commandBinaryDevice(fill, "Close");
+		await commandBinaryDevice(drain, "Open");
+		await commandBinaryDevice(vfdEnable, "Off");
+		await commandAnalogDevice(faceDamper, 100)
+		await commandAnalogDevice(bypassDamper, 0)
+	})
+	
 	test('spot leak', async ()=>{
 		await testBinaryInput(leak, "Off", "On")
 	})
@@ -74,25 +78,27 @@ test.describe('low voltage', ()=>{
 	test("rh2", async () => {
 		await testAnalogInput(rh2)
 	})
-	test("s/a temp", async () => {
+	test("sa temp", async () => {
 		let fbk  = await getAnalogInput(saTemp)
 		let value = parseInt(fbk);
 		test.skip(Number.isNaN(value), 'No sa temp connected')
 		await testAnalogInput(saTemp)
 	})
 	
-	test("m/a temp", async () => {
+	test("ma temp", async () => {
 		await testAnalogInput(maTemp);
 	})
 	test("face damper", async ()=>{
-		await testAnalogIO(faceDamper, 0);
-		await testAnalogIO(faceDamper, 50);
 		await testAnalogIO(faceDamper, 100);
+		await testAnalogIO(faceDamper, 50);
+		await testAnalogIO(faceDamper, 0);
+		await commandAnalogDevice(faceDamper, 100)
 	})
 	test("bypass damper", async ()=>{
-		await testAnalogIO(bypassDamper, 100);
-		await testAnalogIO(bypassDamper, 50);
 		await testAnalogIO(bypassDamper, 0);
+		await testAnalogIO(bypassDamper, 50);
+		await testAnalogIO(bypassDamper, 100);
+		await commandAnalogDevice(bypassDamper, 0);
 	})
 })
 test("fill tank", async()=> {
@@ -107,7 +113,7 @@ test.describe("evap section", ()=> {
 		await testBinaryInput(sump, "Off", "On")
 	})
 	test("conductivity", async () => {
-		await getAnalogInput(conductivity)
+		await testAnalogInput(conductivity)
 	})
 	test("bleed", async () => {
 		await commandBinaryDevice(bleed, "Open")
@@ -141,7 +147,8 @@ test.describe('motor section', async () => {
 	test('motor current switches', async () => {
 		const fans = [sf1, sf2, sf3, sf4, sf5, sf6]
 		for(const fan of fans){
-			await testBinaryInput(fan, 'Off', 'On');
+			console.log(fan.name)
+			await testBinaryInput(fan, 'On', 'Off');
 		}
 	})	
 	test('vfd HOA', async () => {
@@ -171,7 +178,7 @@ test.describe('motor section', async () => {
 		test.setTimeout(0)
 		console.log('running fans for 30 minutes')
 		await page.waitForTimeout(30 * 60000);
-		await commandBinaryDevice(vfdEnable, 'Disable');
+		await commandBinaryDevice(vfdEnable, 'Off');
 	})
 
 

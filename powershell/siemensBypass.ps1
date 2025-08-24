@@ -14,7 +14,11 @@ function test{
 }
 
 Write-Host "press enter to skip tests. 'y' to begin test."
-test -prompt "initialize devices for test? (enter 'y' to start)" -grep "setup"
+
+$specificTest = Read-Host "Test specific device?(press enter to skip)"
+if($specificTest -ne ''){
+	npx playwright test $test -g $specificTest
+}
 test -prompt "Begin low voltage? (enter 'y' to start)" -grep "low voltage"
 test -prompt "Begin filling sump tank? (enter 'y' to start)" -grep "fill tank" 
 test -prompt "Begin Evap section? (enter 'y' to start)" -grep "evap section"
