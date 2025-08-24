@@ -169,6 +169,7 @@ test.describe('motor section', async () => {
 		await testAnalogIO(vfd, 75);
 		console.log(await getAnalogInput(airflow))
 		await testAnalogIO(vfd, 100);
+		getAnalogInput(conductivity)
 		await page.waitForTimeout(3000);
 		let final = await getAnalogInput(airflow)
 		expect(final).toBeGreaterThanOrEqual(45000);
@@ -215,6 +216,11 @@ test.describe('full water', async () => {
 test("close dampers", async ()=>{
 	await commandAnalogDevice(faceDamper, 0)
 	await commandAnalogDevice(bypassDamper, 0)
+})
+
+test("login", () => {
+	test.setTimeout(0)
+	return new Promise(() => { })
 })
 
 async function getBinaryInput (device, state){

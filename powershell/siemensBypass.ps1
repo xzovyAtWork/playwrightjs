@@ -17,7 +17,7 @@ Write-Host "press enter to skip tests. 'y' to begin test."
 
 $specificTest = Read-Host "Test specific device?(press enter to skip)"
 if($specificTest -ne ''){
-	npx playwright test $test -g $specificTest
+	npx playwright test $test -g $specificTest --headed
 }
 test -prompt "Begin low voltage? (enter 'y' to start)" -grep "low voltage"
 test -prompt "Begin filling sump tank? (enter 'y' to start)" -grep "fill tank" 
