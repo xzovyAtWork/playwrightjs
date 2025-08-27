@@ -205,7 +205,7 @@ test.describe('full water', async () => {
 		await page.waitForTimeout(30 * 60000);
 		console.log(`cycle complete. Draining tank. Conductivity: ${await getConductivityValue()}`)
 		await commandBinaryDevice(fill, 'Close');
-		await commandBinaryDevice(drain, 'Open');
+		await commandBinaryDevice(drain, 'Close');
 		await commandBinaryDevice(sump, 'Off');
 		await commandBinaryDevice(bleed, 'Off');
 		await getBinaryInput(wll, "Off")
