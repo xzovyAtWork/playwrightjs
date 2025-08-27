@@ -187,7 +187,7 @@ test.describe('full water', async () => {
 	const conductivityReadings = [];
 	async function getConductivityValue(){
 		await page.waitForTimeout(10000);
-		const conductivityReading = getAnalogInput(conductivity)
+		const conductivityReading = await getAnalogInput(conductivity)
 		conductivityReadings.push(conductivityReading)
 		return conductivityReading;
 	}
@@ -202,8 +202,11 @@ test.describe('full water', async () => {
 		await commandBinaryDevice(sump, 'On');
 		const startValue = await getConductivityValue();
 		console.log(`starting cycle. Conductivity: ${startValue}`)
+
 		await page.waitForTimeout(30 * 60000);
-		console.log(`cycle complete. Draining tank. Conductivity: ${await getConductivityValue()}`)
+
+		const reading = await getConductivityValue();
+		console.log(`cycle complete. Draining tank. Conductivity: ${reading}`)
 		await commandBinaryDevice(fill, 'Close');
 		await commandBinaryDevice(drain, 'Close');
 		await commandBinaryDevice(sump, 'Off');
@@ -218,7 +221,7 @@ test("close dampers", async ()=>{
 	await commandAnalogDevice(bypassDamper, 0)
 })
 
-test("login", () => {
+test("hand", () => {
 	test.setTimeout(0)
 	return new Promise(() => { })
 })
