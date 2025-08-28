@@ -120,7 +120,7 @@ test.describe("evap section", ()=> {
 		console.log('bleed on for 5 minutes');
 		await page.waitForTimeout(5 * 60000);
 		await commandBinaryDevice(bleed, "Close");
-		console.log('bleed off. turn off main water supply')
+		console.log('bleed off. turn off main water supply if test is bypass')
 	})
 	test('run bypass', async ()=>{
 		test.setTimeout(31 * 60000)
@@ -170,7 +170,7 @@ test.describe('motor section', async () => {
 		console.log(await getAnalogInput(airflow))
 		await testAnalogIO(vfd, 100);
 		getAnalogInput(conductivity)
-		await page.waitForTimeout(3000);
+		await page.waitForTimeout(5000);
 		let final = await getAnalogInput(airflow)
 		expect(final).toBeGreaterThanOrEqual(45000);
 		await page.waitForTimeout(3000);
@@ -210,7 +210,6 @@ test.describe('full water', async () => {
 		await commandBinaryDevice(fill, 'Close');
 		await commandBinaryDevice(drain, 'Close');
 		await commandBinaryDevice(sump, 'Off');
-		await commandBinaryDevice(bleed, 'Off');
 		await getBinaryInput(wll, "Off")
 		console.log('Conductivity Readings', conductivityReadings);
 	})
@@ -228,6 +227,7 @@ test("hand", () => {
 
 async function getBinaryInput (device, state){
 	const {name, commandValue, feedbackValue} = device
+	await page.locator("ul.list-group").locator("div", {hasText: feedbackValue}).first().locator("div.text-primary").click();
 	await page.locator("ul.list-group").locator("div", {hasText: feedbackValue}).first().locator("div.text-primary").scrollIntoViewIfNeeded();
 	await expect(page.locator("ul.list-group").locator("div", {hasText: feedbackValue}).first().locator("div.text-primary")).toContainText(state);
 	console.log(`${name}: ${state}`)
@@ -278,6 +278,7 @@ async function testAnalogInput(device){
 }
 async function getAnalogInput(device){
 	const {name, commandValue, feedbackValue} = device;
+	await page.locator("ul.list-group").locator("div", {hasText: feedbackValue}).first().locator("div.text-primary").click();
 	await page.locator("ul.list-group").locator("div", {hasText: feedbackValue}).first().locator("div.text-primary").scrollIntoViewIfNeeded();
 	let value = parseFloat(await page.locator("ul.list-group").locator("div", {hasText: feedbackValue}).first().locator("div.text-primary").textContent());
 	console.log(`${name} reading: ${value}`)

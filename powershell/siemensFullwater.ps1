@@ -13,6 +13,19 @@ function test{
 	}
 }
 
-
-test -prompt "Begin 1st cycle? (enter 'y' to start)" -grep "full water"
-test -prompt "Begin nth rinse cycle? (enter 'y' to start)" -grep "rinse cycle"
+$userInput = Read-Host -Prompt "Begin 1st cycle? (enter 'y' to start)"
+if($userInput -eq 'y'){
+	npx playwright test $test -g "sump current switch"
+	npx playwright test $test -g "conductivity"
+	npx playwright test $test -g "bleed"
+}
+$userInput = Read-Host -Prompt "Begin nth cycle? (enter 'y' to start)"
+if($userInput -eq 'y'){
+	npx playwright test $test -g "rinse cycle"
+}
+while ($userInput -eq 'y') {
+	$userInput = Read-Host -Prompt "Begin nth cycle? (enter 'y' to start)"
+	if($userInput -eq 'y'){
+		npx playwright test $test -g "rinse cycle"
+	}
+}
