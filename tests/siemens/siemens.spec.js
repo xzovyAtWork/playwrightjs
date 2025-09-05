@@ -218,6 +218,8 @@ test.describe('full water', async () => {
 test("close dampers", async ()=>{
 	await commandAnalogDevice(faceDamper, 0)
 	await commandAnalogDevice(bypassDamper, 0)
+	await testAnalogIO(faceDamper, 0)
+	await testAnalogIO(bypassDamper, 0)
 })
 
 test("hand", () => {
@@ -244,6 +246,7 @@ async function commandBinaryDevice(device, value){
 	await page.locator("ul.list-group").locator("div", {hasText: commandValue}).first().locator("select").selectOption(value);
 	await page.locator("ul.list-group").locator("div", {hasText: commandValue}).first().locator("button.element-ok").click();
 	await page.getByRole('button', { name: 'OK' }).click();
+	await expect(page.locator("ul.list-group").locator("div", {hasText: commandValue}).first().locator("div.text-primary")).toContainText(value, {timeout: 3000});
 	console.log(`${name}: ${value}`)
 }
 async function testBinaryInput(device, state1, state2){
@@ -315,7 +318,7 @@ async function testAnalogIO(device, value){
 			console.log(`${name} feedback: ${feedback}`);
 			break;	
 		}
-		feedback = await await page.locator("ul.list-group").locator("div", {hasText: feedbackValue}).first().locator("div.text-primary").textContent();
+		feedback = await page.locator("ul.list-group").locator("div", {hasText: feedbackValue}).first().locator("div.text-primary").textContent();
 		await new Promise(r => setTimeout(r, 7000));
 	}
 }
