@@ -1,6 +1,8 @@
 import {test, expect} from '@playwright/test';
 import {devices} from "./siemensDevices.js"
 require('log-timestamp')(()=>`${new Date().toLocaleTimeString()}`);
+const readline = require("readline");
+const rl = readline.createInterface({input: process.stdin, output: process.stdout});
 
 const {wll, whl, wol, leak} = devices
 const {fill, drain} = devices;
@@ -29,10 +31,15 @@ test.beforeAll('login', async ({browser}) => {
 	await page.getByRole('button', { name: 'Log in' }).click();
 	await page.getByRole('link', { name: ' Application ' }).click();
 	await page.getByRole('link', { name: ' MKE17 C1 CE1 AHU01 MKE17\'' }).click();
+	await page.evaluate(() => {
+		document.body.style.zoom=0.4; //zoom out to get around siemens only updating state when inview.
+	});
 	// actionContent = page.locator("ul.list-group")
 });
 
 test.afterAll(async () => {
+	await page.getByRole('menuitem', { name: 'A' }).click();
+	await page.getByRole('menuitem', { name: 'Log out' })
 	await page.waitForTimeout(500)
 	await context.close();
 })
@@ -79,9 +86,6 @@ test.describe('low voltage', ()=>{
 		await testAnalogInput(rh2)
 	})
 	test("sa temp", async () => {
-		let fbk  = await getAnalogInput(saTemp)
-		let value = parseInt(fbk);
-		test.skip(Number.isNaN(value), 'No sa temp connected')
 		await testAnalogInput(saTemp)
 	})
 	
@@ -92,13 +96,15 @@ test.describe('low voltage', ()=>{
 		await testAnalogIO(faceDamper, 100);
 		await testAnalogIO(faceDamper, 50);
 		await testAnalogIO(faceDamper, 0);
-		await commandAnalogDevice(faceDamper, 100)
 	})
+
 	test("bypass damper", async ()=>{
 		await testAnalogIO(bypassDamper, 0);
 		await testAnalogIO(bypassDamper, 50);
 		await testAnalogIO(bypassDamper, 100);
+
 		await commandAnalogDevice(bypassDamper, 0);
+		await commandAnalogDevice(faceDamper, 100)
 	})
 })
 test("fill tank", async()=> {
@@ -266,6 +272,7 @@ async function testAnalogInput(device){
 	const {name, commandValue, feedbackValue} = device;
 	let feedback;
 	let initial = await getAnalogInput(device);
+	expect(initial)
 	for (let i = 0; i < 400; i++) {
 		feedback = await getAnalogInput(device);
 		if (Math.abs(feedback - initial) >= 1 ) {
@@ -285,6 +292,7 @@ async function getAnalogInput(device){
 	await page.locator("ul.list-group").locator("div", {hasText: feedbackValue}).first().locator("div.text-primary").scrollIntoViewIfNeeded();
 	let value = parseFloat(await page.locator("ul.list-group").locator("div", {hasText: feedbackValue}).first().locator("div.text-primary").textContent());
 	console.log(`${name} reading: ${value}`)
+	expect(value).toBeGreaterThan(0)
 	return value;
 }
 
