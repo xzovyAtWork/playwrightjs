@@ -3,7 +3,7 @@ netsh interface ipv4 set address name="Ethernet" static 169.254.1.2
 
 Start-Sleep -Seconds 2
 
-Set-Location "C:\Users\$env:USERNAME\Documents\playwright"
+Set-Location "C:\Users\$env:USERNAME\Documents\playwrightjs"
 
 try {
     npx playwright test tests/setControllerIP.spec.ts

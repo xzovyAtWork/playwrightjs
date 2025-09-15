@@ -1,4 +1,4 @@
-Set-Location "C:\Users\$env:USERNAME\Documents\playwright"
+Set-Location "C:\Users\$env:USERNAME\Documents\playwrightjs"
 $test = "tests/alc.spec.js"
 
 function test{
