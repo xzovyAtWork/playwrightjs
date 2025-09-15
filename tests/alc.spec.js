@@ -232,33 +232,40 @@ test.describe('motor section', async () => {
 		await testBinaryInput(vfdHOA, 'Off', 'On');
 	})
 
-	test('vfd feedback and airflow', async () => {
-		test.setTimeout(0);
-		await commandBinaryDevice(vfdEnable, 'Enable')
-		const getAirflowReading = async () => {
-			return parseFloat(await actionContent.locator("#bodyTable").locator(`[primid="prim_${airflow.feedbackValue}"]`).textContent())
-		}
-		await testAnalogIO(vfd, 0);
-		console.log(await getAirflowReading())
-		await testAnalogIO(vfd, 25);
-		console.log(await getAirflowReading())
-		await testAnalogIO(vfd, 50);
-		console.log(await getAirflowReading())
-		await testAnalogIO(vfd, 75);
-		console.log(await getAirflowReading())
-		await testAnalogIO(vfd, 100);
-		await page.waitForTimeout(3000);
-		let final = await getAirflowReading()
-		expect(final).toBeGreaterThanOrEqual(45000);
-		await page.waitForTimeout(3000);
-	})
-	test('run fans and test VFD enable', async () => {
-		test.setTimeout(0)
-		console.log('running fans for 30 minutes')
-		await page.waitForTimeout(20 * 60000);
-		await commandBinaryDevice(vfdEnable, 'Disable');
-	})
 })
+test('ramp fans', async () => {
+	test.setTimeout(0);
+	await commandBinaryDevice(vfdEnable, 'Enable')
+	const getAirflowReading = async () => {
+		return parseFloat(await actionContent.locator("#bodyTable").locator(`[primid="prim_${airflow.feedbackValue}"]`).textContent())
+	}
+	await testAnalogIO(vfd, 0);
+	console.log(await getAirflowReading())
+	await testAnalogIO(vfd, 25);
+	console.log(await getAirflowReading())
+	await testAnalogIO(vfd, 50);
+	console.log(await getAirflowReading())
+	await testAnalogIO(vfd, 75);
+	console.log(await getAirflowReading())
+	await testAnalogIO(vfd, 100);
+	await page.waitForTimeout(3000);
+	let final = await getAirflowReading()
+	expect(final).toBeGreaterThanOrEqual(45000);
+	await page.waitForTimeout(3000);
+})
+test('run on timer', async () => {
+	test.setTimeout(0)
+	console.log('running fans for 30 minutes')
+	await page.waitForTimeout(30 * 60000);
+	await commandBinaryDevice(vfdEnable, 'Disable');
+})
+test('close dampers', async ()=>{
+	await commandAnalogDevice(faceDamper, 100);
+	await commandAnalogDevice(bypassDamper, 100);
+	expect(await getAnalogFeedback(faceDamper)).toBe(100, {timeout: 5 * 60000})
+})
+	
+
 test.describe('full water', async () => {
 	const conductivityReadings = [];
 	async function getConductivityValue(){
@@ -298,6 +305,7 @@ async function commandAnalogDevice(device, value){
 			await actionContent.locator("#bodyTable").locator(`[updateid="prim_${lockedValue}_ctrlid1"]`).click();
 			await actionContent.locator("#bodyTable").locator(`[updateid="prim_${lockedValue}_ctrlid1"]`).fill(`${value}`);
 			await page.keyboard.press("Enter")
+			await accept();
 		}else {
 			console.log(`${device.name} ${value}`)
 		}
@@ -321,7 +329,7 @@ async function commandBinaryDevice(device, state, attempt = 1){
 	}catch(err){
 			let el = await actionContent.locator('div.ControlLightDropList-WidgetLightDropList-rowinactive').getByText(state, {timeout: 2000}).nth(1)
 			await el.click();
-			console.log(e)
+			console.log(el);
 	}
 	await accept()
 	await expect(actionContent.locator("#bodyTable").locator(`[primid="prim_${commandValue}"]`)).toHaveText(state, {timeout: 2000})
@@ -345,7 +353,7 @@ async function getAnalogFeedback(device){
 			await page.waitForTimeout(500);
 			feedback = await actionContent.locator("#bodyTable").locator(`[primid="prim_${feedbackValue}"]`).textContent();
 			console.log(`${device.name} feedback: ${feedback}`);
-			break;
+			return feedback;
 		}
 		feedback = await actionContent.locator("#bodyTable").locator(`[primid="prim_${feedbackValue}"]`).textContent();
 		await new Promise(r => setTimeout(r, 7000));
