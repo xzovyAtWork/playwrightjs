@@ -1,6 +1,5 @@
-Set-Location "C:\Users\$env:USERNAME\Documents\Git\playwrightjs"
-
-$test = "tests\alc"
+Set-Location "C:\Users\$env:USERNAME\Documents\playwright"
+$test = "tests/alc/alc.spec.js"
 
 function test{
 	param(
@@ -10,12 +9,22 @@ function test{
 	$userInput = Read-Host -Prompt $prompt
 	Write-Host $grep
 	if($userInput -eq 'y'){
-		npx playwright test $test $grep
+		npx playwright test $test -g $grep --retries 1 --headed
 	}
 }
 
-npx playwright test $test setup.spec.js 
+Write-Host "press enter to skip tests. 'y' to begin test."
 
-test -prompt "Begin low voltage? (enter 'y' to start)" -grep "lowVoltage.spec.js" 
-test -prompt "Begin Evap section? (enter 'y' to start)" -grep "evapBypass.spec.js"
-test -prompt "Begin Motor section? (enter 'y' to start)"-grep "motorSection.spec.js"
+$specificTest = Read-Host "Test specific device?(press enter to skip)"
+if($specificTest -ne ''){
+	npx playwright test $test -g $specificTest --headed
+}
+test -prompt "Begin download? (enter 'y' to start)" -grep "download"
+test -prompt "Begin check faults? (enter 'y' to start)" -grep "check faults"
+test -prompt "Begin low voltage? (enter 'y' to start)" -grep "low voltage"
+test -prompt "Begin filling sump tank? (enter 'y' to start)" -grep "fill tank" 
+test -prompt "Begin Evap section? (enter 'y' to start)" -grep "evap section"
+test -prompt "Begin Motors and Primary Secondary? (enter 'y' to start)"-grep "motor section"
+test -prompt "Ramp Fans? (enter 'y' to start)"-grep "ramp fans"
+test -prompt "Start fan timer? (enter 'y' to start)"-grep "run on timer"
+test -prompt "Close dampers? (enter 'y' to start)"-grep "close dampers"

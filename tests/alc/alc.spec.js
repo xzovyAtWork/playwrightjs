@@ -253,6 +253,37 @@ test.describe('motor section', async () => {
 		await commandBinaryDevice(vfdEnable, 'Disable');
 	})
 })
+test.describe('full water', async () => {
+	const conductivityReadings = [];
+	async function getConductivityValue(){
+		await page.waitForTimeout(10000);
+		const conductivityReading = parseFloat(await actionContent.locator("#bodyTable").locator(`[primid="prim_${conductivity.feedbackValue}"]`).textContent());
+		conductivityReadings.push(conductivityReading)
+		return conductivityReading;
+	}
+	test('rinse cycle', async () => {
+		test.setTimeout(0);
+		await commandBinaryDevice(fill, 'Open')
+		await commandBinaryDevice(drain, 'Close');
+		console.log('waiting for tank to fill...')
+		await expect(await actionContent.locator("#bodyTable").locator(`[primid="prim_${wol.feedbackValue}"]`)).toHaveText("Normal", {timeout: 10 * 60000})
+		await commandBinaryDevice(sump, 'On');
+		const startValue = await getConductivityValue();
+		console.log(`starting cycle. Conductivity: ${startValue}`)
+		await page.waitForTimeout(10 * 60000);
+		console.log("..")
+		await page.waitForTimeout(10 * 60000);
+		console.log("..")
+		await page.waitForTimeout(10 * 60000);
+		console.log(`cycle complete. Draining tank. Conductivity: ${await getConductivityValue()}`)
+		await commandBinaryDevice(fill, 'Close');
+		await commandBinaryDevice(drain, 'Open');
+		await commandBinaryDevice(sump, 'Off');
+		await commandBinaryDevice(bleed, 'Off');
+		await expect(await actionContent.locator("#bodyTable").locator(`[primid="prim_${wll.feedbackValue}"]`)).toHaveText("Low", {timeout: 0})
+		console.log('Conductivity Readings', conductivityReadings);
+	})
+})
 async function commandAnalogDevice(device, value){
 	const { lockedValue, commandValue } = device
 	try{

@@ -31,10 +31,7 @@ test.beforeAll('login', async ({browser}) => {
 	await page.getByRole('button', { name: 'Log in' }).click();
 	await page.getByRole('link', { name: ' Application ' }).click();
 	await page.getByRole('link', { name: ' MKE17 C1 CE1 AHU01 MKE17\'' }).click();
-	await page.evaluate(() => {
-		document.body.style.zoom=0.4; //zoom out to get around siemens only updating state when inview.
-	});
-	// actionContent = page.locator("ul.list-group")
+		// actionContent = page.locator("ul.list-group")
 });
 
 test.afterAll(async () => {

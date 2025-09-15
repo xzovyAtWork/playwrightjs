@@ -1,4 +1,4 @@
-Set-Location "C:\Users\$env:USERNAME\Documents\Git\playwrightjs"
+Set-Location "C:\Users\$env:USERNAME\Documents\playwright"
 $test = "tests/siemens/siemens.spec.js"
 
 function test{
@@ -19,11 +19,8 @@ if($userInput -eq 'y'){
 	npx playwright test $test -g "conductivity"
 	npx playwright test $test -g "bleed"
 }
-$userInput = Read-Host -Prompt "Begin nth cycle? (enter 'y' to start)"
-if($userInput -eq 'y'){
-	npx playwright test $test -g "rinse cycle"
-}
-while ($userInput -eq 'y') {
+
+for (let i = 0; i -le 14; i++) {
 	$userInput = Read-Host -Prompt "Begin nth cycle? (enter 'y' to start)"
 	if($userInput -eq 'y'){
 		npx playwright test $test -g "rinse cycle"

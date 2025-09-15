@@ -12,5 +12,5 @@
 Write-Host "Installing @playwright/test..."
 npm install -D @playwright/test@latest
 Write-Host "Installing chromium..."
-npx playwright install-deps chromium --with-deps
+npx playwright install  chromium --with-deps
 Write-Host "Installation complete"

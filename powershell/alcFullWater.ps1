@@ -1,8 +1,5 @@
-Set-Location "C:\Users\$env:USERNAME\Documents\Git\playwrightjs"
-# $tests = @("download program", "check faults", "low voltage", "fill tank", "evap section", "motor section")
-
-# npx playwright test tests/alcBypass.spec.js
-$test = "tests/alcFullWater.spec.js"
+Set-Location "C:\Users\$env:USERNAME\Documents\playwright"
+$test = "tests/alc/alc.spec.js"
 
 function test{
 	param(
@@ -16,10 +13,16 @@ function test{
 	}
 }
 
-npx playwright test $test -g "download" 
-npx playwright test $test  -g "check faults" 
+$userInput = Read-Host -Prompt "Begin 1st cycle? (enter 'y' to start)"
+if($userInput -eq 'y'){
+	npx playwright test $test -g "sump current switch"
+	npx playwright test $test -g "conductivity"
+	npx playwright test $test -g "bleed"
+}
 
-test -prompt "Begin low voltage? (enter 'y' to start)" -grep "low voltage"
-test -prompt "Begin filling sump tank? (enter 'y' to start)" -grep "fill tank" 
-test -prompt "Begin Evap section? (enter 'y' to start)" -grep "evap section"
-test -prompt "Begin Motor section? (enter 'y' to start)"-grep "motor section"
+for (let i = 0; i -le 14; i++) {
+	$userInput = Read-Host -Prompt "Begin nth cycle? (enter 'y' to start)"
+	if($userInput -eq 'y'){
+		npx playwright test $test -g "rinse cycle"
+	}
+}
