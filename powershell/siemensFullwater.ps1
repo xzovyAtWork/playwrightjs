@@ -1,5 +1,5 @@
 Set-Location "C:\Users\$env:USERNAME\Documents\playwright"
-$test = "tests/siemens/siemens.spec.js"
+$test = "tests/siemens.spec.js"
 
 function test{
 	param(

@@ -1,5 +1,5 @@
 import {test, expect} from '@playwright/test';
-import {devices} from "./siemensDevices.js"
+import {devices} from "../devices/siemensDevices"
 require('log-timestamp')(()=>`${new Date().toLocaleTimeString()}`);
 const readline = require("readline");
 const rl = readline.createInterface({input: process.stdin, output: process.stdout});

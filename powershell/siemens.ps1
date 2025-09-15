@@ -1,5 +1,5 @@
-Set-Location "C:\Users\$env:USERNAME\Documents\Git\playwrightjs"
-$test = "tests/siemens/siemens.spec.js"
+Set-Location "C:\Users\$env:USERNAME\Documents\Git\playwright"
+$test = "tests/siemens.spec.js"
 
 function test{
 	param(

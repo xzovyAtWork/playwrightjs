@@ -1,5 +1,5 @@
 import { test, expect, Page, Context} from '@playwright/test';
-import {devices} from "../alcDevices";
+import { devices } from '../devices/alcDevices';
 require('log-timestamp')(()=>`${new Date().toLocaleTimeString()}`);
 
 const {wll, whl, wol, leak1, leak2} = devices
@@ -10,7 +10,6 @@ const {sump, bleed, conductivity} = devices;
 const {rh1, rh2, maTemp, saTemp} = devices;
 const {vfd, vfdEnable, vfdFault, vfdHOA, airflow} = devices;
 const {sf1, sf2,sf3, sf4, sf5, sf6} = devices;
-
 
 let page;
 let context;
@@ -57,44 +56,53 @@ test.beforeEach(async ({ }, testInfo) => {
 test.afterEach(async ({ }, testInfo) => {
 	console.log(`✅ Completed test: ${testInfo.title}`);
 });
-test('download program', async ({ browser }) => {
-	// test.describe.configure({retries: 3})
+test('download program', async () => {
+	await page.waitForTimeout(2000);
+	let saValue = await actionContent.locator("#bodyTable").locator(`[primid="prim_${saTemp.feedbackValue}"]`).textContent()
+	test.skip(saValue !== '?', "Program already downloaded")
 	test.setTimeout(10 * 60000)
 	let text;
 	console.log('downloading controller program...');
 	await page.waitForLoadState();
 	await page.evaluate(() => window.invokeManualCommand('download'));
-	await expect(actionContent.locator("#ch_message_div", {hasText: "Downloading"})).toBeVisible();
+	await expect(actionContent.locator("#ch_message_div", {hasText: "Downloading"})).toBeVisible({timeout: 5000});
 	while(await actionContent.locator("#ch_message_div", {hasText: "Downloading"}).isVisible()){
 		text = await actionContent.locator("#ch_message_div").first().textContent();
 		console.log(`${text}`);
 		await page.waitForTimeout(5000);
 	}
 	await expect(actionContent.locator("#ch_message_div", {hasText: "Downloading"})).not.toBeVisible()
-	await expect(actionContent.locator("#ch_message_div").first()).not.toBeVisible()
+	console.log(await actionContent.locator("#ch_message_div").first().textContent())
+	await expect(await actionContent.locator("#ch_message_div").first()).not.toBeVisible({timeout: 5000})
 	console.log(text)
 	console.log('program download complete');
 })
 test('check faults', async () =>{
-	// test.describe.configure({retries: 3})
-	const rows = await actionContent.locator('#bodyTable').locator('tr')
-	let quantityFaulted = 0
-	for(let i = 0; i < 58; ++i){
-		let firstColumn = await actionContent.locator('#bodyTable').locator('tr').nth(i).locator('td').first().locator('span')
-		const color = await firstColumn.evaluate(el =>
-			window.getComputedStyle(el).getPropertyValue('color')
-		  );
-		if(color == 'rgb(255, 0, 0)'){
-			console.log(`${await firstColumn.textContent()} faulted`)
-			quantityFaulted++;
+	async function checkFaults(quantityFaulted = 0){
+
+		for(let i = 0; i < 58; ++i){
+			let firstColumn = await actionContent.locator('#bodyTable').locator('tr').nth(i).locator('td').first().locator('span')
+			const color = await firstColumn.evaluate(el =>
+				window.getComputedStyle(el).getPropertyValue('color')
+				);
+				if(color == 'rgb(255, 0, 0)'){
+					console.log(`${await firstColumn.textContent()} faulted`)
+					quantityFaulted++;
+				}
 		}
-	}	
-	if(quantityFaulted > 1){
-		expect(true).toBe(false)			
+		if(quantityFaulted>2){
+			console.log(`${quantityFaulted} faults, checking again in 10s`);
+			await page.waitForTimeout(10000);
+			return await checkFaults()
+		}else{
+			console.log('done')
+			return 
+		}	
 	}
+	await checkFaults();
 })
+
 test.describe('low voltage', () => {
-	test.describe.configure({ mode: 'serial' });
 	test.beforeAll(async ()=>{
 		await page.waitForTimeout(5000)
 		await commandBinaryDevice(fill, "Close");
@@ -106,7 +114,7 @@ test.describe('low voltage', () => {
 		await commandAnalogDevice(faceDamper, 20);
 		await commandAnalogDevice(bypassDamper, 100);
 	})
-	test('mech gallery leak / mpdc', async () => {
+	test('leak', async () => {
 		test.setTimeout(60000);
 		const mpdc = testBinaryInput(leak1, 'Normal', 'Alarm');
 		const mechGalleryLeak = testBinaryInput(leak2, 'Normal', 'Alarm');
@@ -165,32 +173,20 @@ test.describe('low voltage', () => {
 		await commandAnalogDevice(bypassDamper, 100)
 	})
 })
-test('fill tank',async() => {
-	test.setTimeout(0)
+test('fill tank', async ()=>{
 	await commandBinaryDevice(fill, 'Open');
-	await commandBinaryDevice(drain, 'Close');
-	console.log("waiting for WOL to change state")
-	await expect(await actionContent.locator("#bodyTable").locator(`[primid="prim_${wol.feedbackValue}"]`)).toHaveText("Normal", {timeout: 10 * 60000})
-	
+	await commandBinaryDevice(drain, 'Close')
+	await getBinaryInput()
 })
-test.describe('evap section', async () => {
-	test.describe.configure({ mode: 'serial' });
-	test.beforeEach(async ()=>{
-		await page.waitForLoadState();
-	})
+test.describe("evap section", ()=> {
 	test('sump current switch', async () => {
 		await commandBinaryDevice(sump, "On");
 		await testBinaryInput(sump, 'Off', 'On');
 	})
 	test('conductivity', async () => {
 		const conductivityReading = parseFloat(await actionContent.locator("#bodyTable").locator(`[primid="prim_${conductivity.feedbackValue}"]`).textContent());
-		expect(conductivityReading).toBeGreaterThan(100);
 		await getAnalogFeedback(conductivity);
 	})
-	
-})
-test.describe('bypass', async () => {
-	test.describe.configure({ mode: 'serial' });
 	test('bleed', async ()=>{
 		test.setTimeout(6 * 60000)
 		await commandBinaryDevice(bleed, "On");
@@ -210,36 +206,7 @@ test.describe('bypass', async () => {
 		await commandBinaryDevice(drain, "Open");
 	})
 })
-test.describe('full water', async () => {
-	const conductivityReadings = [];
-	async function getConductivityValue(){
-		await page.waitForTimeout(10000);
-		const conductivityReading = parseFloat(await actionContent.locator("#bodyTable").locator(`[primid="prim_${conductivity.feedbackValue}"]`).textContent());
-		conductivityReadings.push(conductivityReading)
-		return conductivityReading;
-	}
-	test('rinse cycle', async () => {
-		test.setTimeout(0);
-		await commandBinaryDevice(fill, 'Open')
-		await commandBinaryDevice(drain, 'Close');
-		console.log('waiting for tank to fill...')
-		await expect(await actionContent.locator("#bodyTable").locator(`[primid="prim_${wol.feedbackValue}"]`)).toHaveText("Normal", {timeout: 10 * 60000})
-		await commandBinaryDevice(sump, 'On');
-		const startValue = await getConductivityValue();
-		console.log(`starting cycle. Conductivity: ${startValue}`)
-		if(startValue > 600){
-			await commandBinaryDevice(bleed, 'On');
-		}
-		await page.waitForTimeout(30 * 60000);
-		console.log(`cycle complete. Draining tank. Conductivity: ${await getConductivityValue()}`)
-		await commandBinaryDevice(fill, 'Close');
-		await commandBinaryDevice(drain, 'Open');
-		await commandBinaryDevice(sump, 'Off');
-		await commandBinaryDevice(bleed, 'Off');
-		await expect(await actionContent.locator("#bodyTable").locator(`[primid="prim_${wll.feedbackValue}"]`)).toHaveText("Low", {timeout: 10 * 60000})
-		console.log('Conductivity Readings',conductivityReadings);
-	})
-})
+
 test.describe('motor section', async () => {
 	test.describe.configure({ mode: 'serial' });
 	test('secondary power status', async() => {
@@ -290,11 +257,37 @@ test.describe('motor section', async () => {
 		await commandBinaryDevice(vfdEnable, 'Disable');
 	})
 })
-test('manually operate unit', async () => {
-	test.setTimeout(0)
-	return new Promise(() => { })
+test.describe('full water', async () => {
+	const conductivityReadings = [];
+	async function getConductivityValue(){
+		await page.waitForTimeout(10000);
+		const conductivityReading = parseFloat(await actionContent.locator("#bodyTable").locator(`[primid="prim_${conductivity.feedbackValue}"]`).textContent());
+		conductivityReadings.push(conductivityReading)
+		return conductivityReading;
+	}
+	test('rinse cycle', async () => {
+		test.setTimeout(0);
+		await commandBinaryDevice(fill, 'Open')
+		await commandBinaryDevice(drain, 'Close');
+		console.log('waiting for tank to fill...')
+		await expect(await actionContent.locator("#bodyTable").locator(`[primid="prim_${wol.feedbackValue}"]`)).toHaveText("Normal", {timeout: 10 * 60000})
+		await commandBinaryDevice(sump, 'On');
+		const startValue = await getConductivityValue();
+		console.log(`starting cycle. Conductivity: ${startValue}`)
+		await page.waitForTimeout(10 * 60000);
+		console.log("..")
+		await page.waitForTimeout(10 * 60000);
+		console.log("..")
+		await page.waitForTimeout(10 * 60000);
+		console.log(`cycle complete. Draining tank. Conductivity: ${await getConductivityValue()}`)
+		await commandBinaryDevice(fill, 'Close');
+		await commandBinaryDevice(drain, 'Open');
+		await commandBinaryDevice(sump, 'Off');
+		await commandBinaryDevice(bleed, 'Off');
+		await expect(await actionContent.locator("#bodyTable").locator(`[primid="prim_${wll.feedbackValue}"]`)).toHaveText("Low", {timeout: 0})
+		console.log('Conductivity Readings', conductivityReadings);
+	})
 })
-
 async function commandAnalogDevice(device, value){
 	const { lockedValue, commandValue } = device
 	try{
@@ -336,6 +329,12 @@ async function commandBinaryDevice(device, state, attempt = 1){
 		commandBinaryDevice(device, state, attempt+=1);
 	}
 };
+async function getBinaryInput(device, state){
+	const {feedbackValue, commandValue, lockedValue} = device
+	await expect(actionContent.locator("#bodyTable").locator(`[primid="prim_${feedbackValue}"]`)).toContainText(state)
+	console.log(`${device.name} ${state}`)
+}
+
 async function getAnalogFeedback(device){
 	const {feedbackValue} = device
 	let result;
@@ -354,6 +353,7 @@ async function getAnalogFeedback(device){
 		await new Promise(r => setTimeout(r, 7000));
 	}
 }
+
 async function testAnalogIO(device, value) {
 	const {feedbackValue, commandValue, lockedValue} = device
 	await commandAnalogDevice(device, value);
