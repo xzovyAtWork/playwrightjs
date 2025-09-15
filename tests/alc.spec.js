@@ -43,7 +43,7 @@ test.beforeAll('setup auto click', async () => {
 			let config = { attributes: true, childList: true, subtree: true };
 			autoAccept.observe(acceptNode, config);
 		}
-		setUpObserver();
+		// setUpObserver();
 	})
 })
 test.afterAll(async () => {
@@ -101,19 +101,20 @@ test('check faults', async () =>{
 	}
 	await checkFaults();
 })
+test('setup', async ()=>{
+	await page.waitForTimeout(5000)
+	await commandBinaryDevice(fill, "Close");
+	await commandBinaryDevice(drain, "Close");
+	await commandBinaryDevice(bleed, "Off");
+	await commandBinaryDevice(sump, "Off");
+	await commandBinaryDevice(vfdEnable, "Disable");
+	await commandAnalogDevice(vfd, 0);
+	await commandAnalogDevice(faceDamper, 20);
+	await commandAnalogDevice(bypassDamper, 100);
+})
 
 test.describe('low voltage', () => {
-	test.beforeAll(async ()=>{
-		await page.waitForTimeout(5000)
-		await commandBinaryDevice(fill, "Close");
-		await commandBinaryDevice(drain, "Close");
-		await commandBinaryDevice(bleed, "Off");
-		await commandBinaryDevice(sump, "Off");
-		await commandBinaryDevice(vfdEnable, "Disable");
-		await commandAnalogDevice(vfd, 0);
-		await commandAnalogDevice(faceDamper, 20);
-		await commandAnalogDevice(bypassDamper, 100);
-	})
+
 	test('leak', async () => {
 		test.setTimeout(60000);
 		const mpdc = testBinaryInput(leak1, 'Normal', 'Alarm');
@@ -126,6 +127,7 @@ test.describe('low voltage', () => {
 		}
 	});
 	test('fill actuator', async () => {
+		await getBinaryInput(fill, "Close")
 		expect(await actionContent.locator("#bodyTable").locator(`[primid="prim_${fill.feedbackValue}"]`)).toHaveText("Open", {timeout: 10 * 60000})
 		await testBinaryIO(fill, "Open");
 		await testBinaryIO(fill, "Close");
@@ -176,7 +178,7 @@ test.describe('low voltage', () => {
 test('fill tank', async ()=>{
 	await commandBinaryDevice(fill, 'Open');
 	await commandBinaryDevice(drain, 'Close')
-	await getBinaryInput()
+	await getBinaryInput(wol, 'Normal')
 })
 test.describe("evap section", ()=> {
 	test('sump current switch', async () => {
@@ -303,7 +305,11 @@ async function commandAnalogDevice(device, value){
 		console.log(`commanding ${device.name} failed`)
 	}
 }
+async function accept(){
+	await expect(page.getByRole('cell', { name: 'Accept Cancel' })).toBeVisible();
+	await page.locator('#acceptSpan').getByText('Accept').click();
 
+}
 async function commandBinaryDevice(device, state, attempt = 1){
 	const {lockedValue, commandValue, name} = device
 	console.log(`commanding ${name}: ${state}, attempt: ${attempt}`)
@@ -311,23 +317,15 @@ async function commandBinaryDevice(device, state, attempt = 1){
 	if(currentLockedValue === state){console.log(`${device.name} already ${state}`); return;}
 	await actionContent.locator("#bodyTable").locator(`[updateid="prim_${lockedValue}_ctrlid1"]`).click();
 	try{
-		try{
-			await actionContent.locator('div.ControlLightDropList-WidgetLightDropList-rowinactive').getByText(state).click();
-		}catch(err){
-				let el = await actionContent.locator('div.ControlLightDropList-WidgetLightDropList-rowinactive').getByText(state, {timeout: 2000}).nth(1)
-				await el.click();
-				console.log(e)
-			}
-			await expect(actionContent.locator("#bodyTable").locator(`[primid="prim_${commandValue}"]`)).toHaveText(state, {timeout: 2000})
-			
+		await actionContent.locator('div.ControlLightDropList-WidgetLightDropList-rowinactive').getByText(state).click();
 	}catch(err){
-		if(attempt >3 ){
-			console.log(`commanding ${device.name} failed, aborting`);
-			return ;
-		}
-		console.log(`commanding ${device.name} failed, trying again`);
-		commandBinaryDevice(device, state, attempt+=1);
+			let el = await actionContent.locator('div.ControlLightDropList-WidgetLightDropList-rowinactive').getByText(state, {timeout: 2000}).nth(1)
+			await el.click();
+			console.log(e)
 	}
+	await accept()
+	await expect(actionContent.locator("#bodyTable").locator(`[primid="prim_${commandValue}"]`)).toHaveText(state, {timeout: 2000})
+			
 };
 async function getBinaryInput(device, state){
 	const {feedbackValue, commandValue, lockedValue} = device

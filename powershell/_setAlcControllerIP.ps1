@@ -6,7 +6,7 @@ Start-Sleep -Seconds 2
 Set-Location "C:\Users\$env:USERNAME\Documents\playwrightjs"
 
 try {
-    npx playwright test tests/setControllerIP.spec.ts
+    npx playwright test tests/alcSetup.spec.js
 } catch {
     Write-Error "set controller IP failed."
 }
