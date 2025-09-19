@@ -1,7 +1,7 @@
 {
   "name": "playwrightjs",
   "version": "1.0.0",
-  "description": "",
+  "description": "- commandBinaryDevice\r - getBinaryInput\r - commandAnalogDevice\r - getAnalogInput\r - pollAnalogInput",
   "main": "index.js",
   "scripts": {},
   "keywords": [],
@@ -12,5 +12,22 @@
     "@playwright/test": "^1.55.0",
     "@types/node": "^24.3.1",
     "log-timestamp": "^0.3.0"
-  }
+  },
+  "directories": {
+    "test": "tests"
+  },
+  "dependencies": {
+    "log-prefix": "^0.1.1",
+    "playwright": "^1.55.0",
+    "playwright-core": "^1.55.0",
+    "undici-types": "^7.10.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/xzovyatwork/playwrightjs.git"
+  },
+  "bugs": {
+    "url": "https://github.com/xzovyatwork/playwrightjs/issues"
+  },
+  "homepage": "https://github.com/xzovyatwork/playwrightjs#readme"
 }

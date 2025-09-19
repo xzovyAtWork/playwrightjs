@@ -230,12 +230,12 @@ test("hand", () => {
 	return new Promise(() => { })
 })
 
-async function getBinaryInput (device, state){
+async function getBinaryInput (device, value){
 	const {name, commandValue, feedbackValue} = device
 	await page.locator("ul.list-group").locator("div", {hasText: feedbackValue}).first().locator("div.text-primary").click();
 	await page.locator("ul.list-group").locator("div", {hasText: feedbackValue}).first().locator("div.text-primary").scrollIntoViewIfNeeded();
-	await expect(page.locator("ul.list-group").locator("div", {hasText: feedbackValue}).first().locator("div.text-primary")).toContainText(state);
-	console.log(`${name}: ${state}`)
+	await expect(page.locator("ul.list-group").locator("div", {hasText: feedbackValue}).first().locator("div.text-primary")).toContainText(value);
+	console.log(`${name}: ${value}`)
 }
 async function commandBinaryDevice(device, value){
 	const {name, commandValue, feedbackValue} = device

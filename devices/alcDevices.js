@@ -37,7 +37,7 @@ export const devices = {
 
  vfd : new Device('VFD', 766, 1709, 1698), //speed command
  vfdHOA : new Device('VFD HOA', 1524, 2169),
- vfdEnable : new Device('VFD Enable', undefined, 2178),
+ vfdEnable : new Device('VFD Enable', undefined, 2178, 2169),
  vfdFault : new Device('VFD Fault', 1553),
 
  sump : new Device('Pump Status', 1321, 2149, 2140),

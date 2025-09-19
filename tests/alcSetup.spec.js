@@ -1,13 +1,19 @@
 require('log-timestamp')(()=>`${new Date().toLocaleTimeString()}`);
 import { test, expect, page, Context} from '@playwright/test'
 
-test('setup', async ({page})=> {
+test('set controller IP', async ({ page }) => {
+	console.log('opening My Module/ports...')
 	await page.goto('http://169.254.1.1/ports');
-	await expect(page.getByText('DHCP IP Address ? Subnet Mask')).toBeVisible();
-
- await page.getByRole('radio', { name: 'Default IP Address' }).check();
- await page.getByRole('button', { name: 'Save' }).click();
- await expect(page.getByText('Restarting device. Please wait')).toBeVisible();
- await page.goto('http://169.254.1.1/ports');
- await expect(page.getByText('IP Address 192.168.168.1')).toBeVisible();
+	await page.waitForLoadState();
+	console.log('page loaded')
+	if(await page.getByRole('radio', { name: 'Custom Static' }).isChecked()){
+		await page.getByLabel('Default').click();
+		await page.getByRole("button", { name: 'Save' }).click();
+		console.log('restarting device...')
+		await expect(page.getByText("Restarting Device")).toBeVisible();
+		await expect(page.getByText('IP Port')).toBeVisible();
+		console.log("Controller restarted and IP changed");
+	}else {
+		console.log("Controller IP already set to 192.168.168.128")
+	}
 })

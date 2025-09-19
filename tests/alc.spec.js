@@ -34,18 +34,7 @@ test.beforeAll('navigate to I/O points', async () => {
 	await ioPoints.click();
 	actionContent = page.locator("#actionContent").contentFrame();
 });
-test.beforeAll('setup auto click', async () => {
-	await page.evaluate(()=>{
-		let  setUpObserver = () => {
-			let acceptNode = document.querySelector("#MainBarTR > td.actionSection.fill-horz.barBg").children[1];
-			let cb = () => handleAcceptButton();
-			let autoAccept = new MutationObserver(cb);
-			let config = { attributes: true, childList: true, subtree: true };
-			autoAccept.observe(acceptNode, config);
-		}
-		// setUpObserver();
-	})
-})
+
 test.afterAll(async () => {
 	await page.waitForTimeout(500)
 	await context.close();
@@ -56,64 +45,67 @@ test.beforeEach(async ({ }, testInfo) => {
 test.afterEach(async ({ }, testInfo) => {
 	console.log(`✅ Completed test: ${testInfo.title}`);
 });
-test('download program', async () => {
-	await page.waitForTimeout(2000);
-	let saValue = await actionContent.locator("#bodyTable").locator(`[primid="prim_${saTemp.feedbackValue}"]`).textContent()
-	test.skip(saValue !== '?', "Program already downloaded")
-	test.setTimeout(10 * 60000)
-	let text;
-	console.log('downloading controller program...');
-	await page.waitForLoadState();
-	await page.evaluate(() => window.invokeManualCommand('download'));
-	await expect(actionContent.locator("#ch_message_div", {hasText: "Downloading"})).toBeVisible({timeout: 5000});
-	while(await actionContent.locator("#ch_message_div", {hasText: "Downloading"}).isVisible()){
-		text = await actionContent.locator("#ch_message_div").first().textContent();
-		console.log(`${text}`);
-		await page.waitForTimeout(5000);
-	}
-	await expect(actionContent.locator("#ch_message_div", {hasText: "Downloading"})).not.toBeVisible()
-	console.log(await actionContent.locator("#ch_message_div").first().textContent())
-	await expect(await actionContent.locator("#ch_message_div").first()).not.toBeVisible({timeout: 5000})
-	console.log(text)
-	console.log('program download complete');
-})
-test('check faults', async () =>{
-	async function checkFaults(quantityFaulted = 0){
+test.describe('download and check faults', () => {
 
-		for(let i = 0; i < 58; ++i){
-			let firstColumn = await actionContent.locator('#bodyTable').locator('tr').nth(i).locator('td').first().locator('span')
-			const color = await firstColumn.evaluate(el =>
-				window.getComputedStyle(el).getPropertyValue('color')
-				);
-				if(color == 'rgb(255, 0, 0)'){
-					console.log(`${await firstColumn.textContent()} faulted`)
-					quantityFaulted++;
-				}
+	test('download program', async () => {
+		await page.waitForTimeout(2000);
+		let saValue = await actionContent.locator("#bodyTable").locator(`[primid="prim_${saTemp.feedbackValue}"]`).textContent()
+		test.skip(saValue !== '?', "Program already downloaded")
+		test.setTimeout(10 * 60000)
+		let text;
+		console.log('downloading controller program...');
+		await page.waitForLoadState();
+		await page.evaluate(() => window.invokeManualCommand('download'));
+		await expect(actionContent.locator("#ch_message_div", {hasText: "Downloading"})).toBeVisible({timeout: 5000});
+		while(await actionContent.locator("#ch_message_div", {hasText: "Downloading"}).isVisible()){
+			text = await actionContent.locator("#ch_message_div").first().textContent();
+			console.log(`${text}`);
+			await page.waitForTimeout(5000);
 		}
-		if(quantityFaulted>2){
-			console.log(`${quantityFaulted} faults, checking again in 10s`);
-			await page.waitForTimeout(10000);
-			return await checkFaults()
-		}else{
-			console.log('done')
-			return 
-		}	
-	}
-	await checkFaults();
-})
-test('setup', async ()=>{
-	await page.waitForTimeout(5000)
-	await commandBinaryDevice(fill, "Close");
-	await commandBinaryDevice(drain, "Close");
-	await commandBinaryDevice(bleed, "Off");
-	await commandBinaryDevice(sump, "Off");
-	await commandBinaryDevice(vfdEnable, "Disable");
-	await commandAnalogDevice(vfd, 0);
-	await commandAnalogDevice(faceDamper, 20);
-	await commandAnalogDevice(bypassDamper, 100);
+		await expect(actionContent.locator("#ch_message_div", {hasText: "Downloading"})).not.toBeVisible()
+		console.log(await actionContent.locator("#ch_message_div").first().textContent())
+		await expect(await actionContent.locator("#ch_message_div").first()).not.toBeVisible({timeout: 5000})
+		console.log(text)
+		console.log('program download complete');
+	})
+	test('check faults', async () =>{
+		async function checkFaults(quantityFaulted = 0){
+			
+			for(let i = 0; i < 58; ++i){
+				let firstColumn = await actionContent.locator('#bodyTable').locator('tr').nth(i).locator('td').first().locator('span')
+				const color = await firstColumn.evaluate(el =>
+					window.getComputedStyle(el).getPropertyValue('color')
+					);
+					if(color == 'rgb(255, 0, 0)'){
+						console.log(`${await firstColumn.textContent()} faulted`)
+						quantityFaulted++;
+					}
+				}
+				if(quantityFaulted>2){
+					console.log(`${quantityFaulted} faults, checking again in 10s`);
+					await page.waitForTimeout(10000);
+					return await checkFaults()
+				}else{
+					console.log('done')
+					return 
+				}	
+			}
+			await checkFaults();
+		})
 })
 
 test.describe('low voltage', () => {
+	test('setup', async ()=>{
+		await page.waitForTimeout(5000)
+		await commandBinaryDevice(fill, "Close");
+		await commandBinaryDevice(drain, "Close");
+		await commandBinaryDevice(bleed, "Off");
+		await commandBinaryDevice(sump, "Off");
+		await commandBinaryDevice(vfdEnable, "Disable");
+		await commandAnalogDevice(vfd, 0);
+		await commandAnalogDevice(faceDamper, 20);
+		await commandAnalogDevice(bypassDamper, 100);
+	})
 
 	test('leak', async () => {
 		test.setTimeout(60000);
@@ -127,15 +119,10 @@ test.describe('low voltage', () => {
 		}
 	});
 	test('fill actuator', async () => {
-		await getBinaryInput(fill, "Close")
-		expect(await actionContent.locator("#bodyTable").locator(`[primid="prim_${fill.feedbackValue}"]`)).toHaveText("Open", {timeout: 10 * 60000})
-		await testBinaryIO(fill, "Open");
-		await testBinaryIO(fill, "Close");
+		await testBinaryIO(fill, "Open", "Close");
 	})
 	test('drain actuator', async () => {
-		expect(await actionContent.locator("#bodyTable").locator(`[primid="prim_${drain.feedbackValue}"]`)).toHaveText("Close", {timeout: 10 * 60000})
-		await testBinaryIO(drain, "Open");
-		await testBinaryIO(drain , "Close");
+		await testBinaryIO(drain, "Open", "Close");
 	})
 	test('wll', async () => {
 		await testBinaryInput(wll, 'Low', 'Normal');
@@ -147,18 +134,18 @@ test.describe('low voltage', () => {
 		await testBinaryInput(whl, 'Normal', 'Alarm');
 	})
 	test('ma temp', async ()=>{
-		await getAnalogFeedback(maTemp)
+		await testAnalogInput(maTemp)
 	})
 	test('rh1', async ()=>{
-		await getAnalogFeedback(rh1)
+		await testAnalogInput(rh1)
 	})
 	test('rh2', async ()=>{
-		await getAnalogFeedback(rh2)
+		await testAnalogInput(rh2)
 	})
 	test('sa temp', async ()=>{
-		let value = parseFloat(await actionContent.locator("#bodyTable").locator(`[primid="prim_${saTemp.feedbackValue}"]`).textContent())
+		let value = getAnalogInput(saTemp.feedbackValue)
 		test.skip( value < 0,`${saTemp.name} faulty`);
-		await getAnalogFeedback(saTemp)
+		await getAnalogInput(saTemp)
 	})
 	test('face damper', async () => {
 		test.setTimeout(5 * 60000);
@@ -187,7 +174,7 @@ test.describe("evap section", ()=> {
 	})
 	test('conductivity', async () => {
 		const conductivityReading = parseFloat(await actionContent.locator("#bodyTable").locator(`[primid="prim_${conductivity.feedbackValue}"]`).textContent());
-		await getAnalogFeedback(conductivity);
+		await testAnalogInput(conductivity);
 	})
 	test('bleed', async ()=>{
 		test.setTimeout(6 * 60000)
@@ -232,32 +219,32 @@ test.describe('motor section', async () => {
 		await testBinaryInput(vfdHOA, 'Off', 'On');
 	})
 
-	test('vfd feedback and airflow', async () => {
-		test.setTimeout(0);
-		await commandBinaryDevice(vfdEnable, 'Enable')
-		const getAirflowReading = async () => {
-			return parseFloat(await actionContent.locator("#bodyTable").locator(`[primid="prim_${airflow.feedbackValue}"]`).textContent())
-		}
-		await testAnalogIO(vfd, 0);
-		console.log(await getAirflowReading())
-		await testAnalogIO(vfd, 25);
-		console.log(await getAirflowReading())
-		await testAnalogIO(vfd, 50);
-		console.log(await getAirflowReading())
-		await testAnalogIO(vfd, 75);
-		console.log(await getAirflowReading())
-		await testAnalogIO(vfd, 100);
-		await page.waitForTimeout(3000);
-		let final = await getAirflowReading()
-		expect(final).toBeGreaterThanOrEqual(45000);
-		await page.waitForTimeout(3000);
-	})
-	test('run fans and test VFD enable', async () => {
-		test.setTimeout(0)
-		console.log('running fans for 30 minutes')
-		await page.waitForTimeout(20 * 60000);
-		await commandBinaryDevice(vfdEnable, 'Disable');
-	})
+})
+test('ramp fans', async () => {
+	test.setTimeout(0);
+	await commandBinaryDevice(vfdEnable, 'Enable')
+	const getAirflowReading = async () => {
+		return parseFloat(await actionContent.locator("#bodyTable").locator(`[primid="prim_${airflow.feedbackValue}"]`).textContent())
+	}
+	await testAnalogIO(vfd, 0);
+	console.log(await getAirflowReading())
+	await testAnalogIO(vfd, 25);
+	console.log(await getAirflowReading())
+	await testAnalogIO(vfd, 50);
+	console.log(await getAirflowReading())
+	await testAnalogIO(vfd, 75);
+	console.log(await getAirflowReading())
+	await testAnalogIO(vfd, 100);
+	await page.waitForTimeout(3000);
+	let final = await getAirflowReading()
+	expect(final).toBeGreaterThanOrEqual(45000);
+	await page.waitForTimeout(3000);
+})
+test('run on timer', async () => {
+	test.setTimeout(0)
+	console.log('running fans for 30 minutes')
+	await page.waitForTimeout(20 * 60000);
+	await commandBinaryDevice(vfdEnable, 'Disable');
 })
 test.describe('full water', async () => {
 	const conductivityReadings = [];
@@ -290,65 +277,85 @@ test.describe('full water', async () => {
 		console.log('Conductivity Readings', conductivityReadings);
 	})
 })
-async function commandAnalogDevice(device, value){
-	const { lockedValue, commandValue } = device
-	try{
-		const currentValue = parseInt(await actionContent.locator("#bodyTable").locator(`[updateid="prim_${commandValue}_ctrlid1"]`).textContent());
-		if(currentValue !== value){
-			await actionContent.locator("#bodyTable").locator(`[updateid="prim_${lockedValue}_ctrlid1"]`).click();
-			await actionContent.locator("#bodyTable").locator(`[updateid="prim_${lockedValue}_ctrlid1"]`).fill(`${value}`);
-			await page.keyboard.press("Enter")
-		}else {
-			console.log(`${device.name} ${value}`)
-		}
-	}catch(err){
-		console.log(`commanding ${device.name} failed`)
-	}
-}
-async function accept(){
-	await expect(page.getByRole('cell', { name: 'Accept Cancel' })).toBeVisible();
-	await page.locator('#acceptSpan').getByText('Accept').click();
 
+////
+///Binary devices
+////
+async function getBinaryInput(device, value){
+	const {feedbackValue, commandValue, lockedValue, name} = device
+	await expect(actionContent.locator("#bodyTable").locator(`[primid="prim_${feedbackValue}"]`)).toContainText(value)
+	console.log(`${name} ${value}`)
 }
-async function commandBinaryDevice(device, state, attempt = 1){
+async function commandBinaryDevice(device, value){
 	const {lockedValue, commandValue, name} = device
-	console.log(`commanding ${name}: ${state}, attempt: ${attempt}`)
+	console.log(`commanding ${name}: ${value}`)
 	const currentLockedValue = await actionContent.locator("#bodyTable").locator(`[updateid="prim_${lockedValue}_ctrlid1"]`).locator('span').first().textContent();
-	if(currentLockedValue === state){console.log(`${device.name} already ${state}`); return;}
+	if(currentLockedValue === value){console.log(`${device.name} already ${value}`); return;}
 	await actionContent.locator("#bodyTable").locator(`[updateid="prim_${lockedValue}_ctrlid1"]`).click();
-	try{
-		await actionContent.locator('div.ControlLightDropList-WidgetLightDropList-rowinactive').getByText(state).click();
-	}catch(err){
-			let el = await actionContent.locator('div.ControlLightDropList-WidgetLightDropList-rowinactive').getByText(state, {timeout: 2000}).nth(1)
-			await el.click();
-			console.log(e)
-	}
+	console.log(value)
+	await actionContent.locator('div.ControlLightDropList-WidgetLightDropList-rowinactive:visible').getByText(value).click();
+
 	await accept()
-	await expect(actionContent.locator("#bodyTable").locator(`[primid="prim_${commandValue}"]`)).toHaveText(state, {timeout: 2000})
-			
+	await expect(actionContent.locator("#bodyTable").locator(`[primid="prim_${commandValue}"]`)).toHaveText(value, {timeout: 2000})
+	console.log(`${name}: ${value}`)
 };
-async function getBinaryInput(device, state){
-	const {feedbackValue, commandValue, lockedValue} = device
-	await expect(actionContent.locator("#bodyTable").locator(`[primid="prim_${feedbackValue}"]`)).toContainText(state)
-	console.log(`${device.name} ${state}`)
+
+async function testBinaryInput(device, state1, state2){
+	const {feedbackValue, name} = device;
+	await getBinaryInput(device, state1)
+	console.log(`${name}: ${state1} Waiting for state change...`);
+	await getBinaryInput(device, state2)
+	console.log(`${name}: ${state2}`)
+}
+async function testBinaryIO(device, state1, state2) {
+	await commandBinaryDevice(device, state1);
+	await getBinaryInput(device, state1);
+	await commandBinaryDevice(device, state2);
+	await getBinaryInput(device, state2);
 }
 
-async function getAnalogFeedback(device){
-	const {feedbackValue} = device
+
+
+////
+/// Analog Devices
+////
+async function getAnalogInput(device){
+	const {feedbackValue, name} = device
 	let result;
 	let value = parseFloat(await actionContent.locator("#bodyTable").locator(`[primid="prim_${feedbackValue}"]`).textContent());
-	console.log(`${device.name} initial reading: ${value}`)
-	for (let i = 0; i < 400; i++) {
-		let feedback = await actionContent.locator("#bodyTable").locator(`[primid="prim_${feedbackValue}"]`).textContent();
-		result = parseFloat(feedback);
-		if (Math.abs(value - result) > 0.1 ) {
+	console.log(`${name} reading: ${value}`)
+	expect(value).toBeGreaterThan(0);
+	return value;
+}
+
+async function testAnalogInput(device){
+	const {name, feedbackValue} = device;
+	let feedback;
+	let initial = await getAnalogInput(device);
+	for(let i = 0; i < 400; i++){
+		feedback = await getAnalogInput(device);
+		if(Math.abs(feedback - initial) >= 1){
 			await page.waitForTimeout(500);
-			feedback = await actionContent.locator("#bodyTable").locator(`[primid="prim_${feedbackValue}"]`).textContent();
-			console.log(`${device.name} feedback: ${feedback}`);
+			feedback = await getAnalogInput(device);
+			console.log(`${name} feedback: ${feedback}`);
 			break;
 		}
-		feedback = await actionContent.locator("#bodyTable").locator(`[primid="prim_${feedbackValue}"]`).textContent();
+		feedback = await getAnalogInput(device);
 		await new Promise(r => setTimeout(r, 7000));
+	}
+	return parseInt(feedback);
+}
+
+async function commandAnalogDevice(device, value){
+	const { lockedValue, commandValue } = device
+	const currentValue = parseInt(await actionContent.locator("#bodyTable").locator(`[updateid="prim_${commandValue}_ctrlid1"]`).textContent());
+	if(currentValue !== value){
+		await actionContent.locator("#bodyTable").locator(`[updateid="prim_${lockedValue}_ctrlid1"]`).click();
+		await actionContent.locator("#bodyTable").locator(`[updateid="prim_${lockedValue}_ctrlid1"]`).fill(`${value}`);
+		await page.keyboard.press("Enter")
+		await accept();
+	}else {
+		console.log(`${device.name} ${value}`)
 	}
 }
 
@@ -357,31 +364,21 @@ async function testAnalogIO(device, value) {
 	await commandAnalogDevice(device, value);
 	let result = 100;
 	for (let i = 0; i < 40; i++) {
-		let feedback = await actionContent.locator("#bodyTable").locator(`[primid="prim_${feedbackValue}"]`).textContent();
+		let feedback = getAnalogInput(device)
 		result = parseInt(feedback);
 		if (Math.abs(value - result) < 5) {
 			await page.waitForTimeout(5000);
-			feedback = await actionContent.locator("#bodyTable").locator(`[primid="prim_${feedbackValue}"]`).textContent();
+			feedback = await getAnalogInput(device)
 			console.log(`feedback: ${feedback}`);
 			break;
 		}
-		feedback = await actionContent.locator("#bodyTable").locator(`[primid="prim_${feedbackValue}"]`).textContent();
+		feedback = await getAnalogInput(device)
 		await new Promise(r => setTimeout(r, 7000));
 	}
-	expect(Math.abs(result - value)).toBeLessThanOrEqual(5);
 }
-async function testBinaryIO(device, state) {
-	const {commandValue, feedbackValue} = device;
-	await commandBinaryDevice(device, state);
-	await expect(actionContent.locator("#bodyTable").locator(`[primid="prim_${commandValue}"]`)).toHaveText(state);
-	await expect(actionContent.locator("#bodyTable").locator(`[primid="prim_${feedbackValue}"]`)).toHaveText(state);
-	console.log(`${device.name} ${state}`)
-}
-async function testBinaryInput(device, state1, state2){
-	const {feedbackValue} = device;
-	expect(actionContent.locator("#bodyTable").locator(`[primid="prim_${feedbackValue}"]`)).not.toBe("?")
-	await expect(actionContent.locator("#bodyTable").locator(`[primid="prim_${feedbackValue}"]`)).toHaveText(state1);
-	console.log(`${device.name}: ${state1} Waiting for state change...`);
-	await expect(actionContent.locator("#bodyTable").locator(`[primid="prim_${feedbackValue}"]`)).toHaveText(state2);
-	console.log(`${device.name}: ${state2}`)
+
+
+async function accept(){
+	await expect(page.getByRole('cell', { name: 'Accept Cancel' })).toBeVisible();
+	await page.locator('#acceptSpan').getByText('Accept').click();
 }

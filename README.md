@@ -3,13 +3,12 @@
 ## Helper functions:
 - commandBinaryDevice
 - getBinaryInput
+
 - commandAnalogDevice
 - getAnalogInput
-- pollAnalogInput
 
-
--testBinaryIO
--testBinaryInput
--testAnalogIO
--testAnalogInput
+- testBinaryIO
+- testBinaryInput
+- testAnalogIO
+- testAnalogInput
 
