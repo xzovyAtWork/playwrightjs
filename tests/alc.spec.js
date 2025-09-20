@@ -279,8 +279,8 @@ test.describe('full water', async () => {
 })
 
 test("close dampers", async ()=>{
-	await commandAnalogDevice(faceDamper, 0)
-	await commandAnalogDevice(bypassDamper, 0)
+	await commandAnalogDevice(faceDamper, 100)
+	await commandAnalogDevice(bypassDamper, 100)
 	await testAnalogIO(faceDamper, 0)
 	await testAnalogIO(bypassDamper, 0)
 })
