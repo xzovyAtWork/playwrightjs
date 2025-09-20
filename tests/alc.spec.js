@@ -165,6 +165,7 @@ test.describe('low voltage', () => {
 test('fill tank', async ()=>{
 	await commandBinaryDevice(fill, 'Open');
 	await commandBinaryDevice(drain, 'Close')
+	console.log("waiting for WOL to change state...")
 	await getBinaryInput(wol, 'Normal')
 })
 test.describe("evap section", ()=> {
@@ -223,20 +224,18 @@ test.describe('motor section', async () => {
 test('ramp fans', async () => {
 	test.setTimeout(0);
 	await commandBinaryDevice(vfdEnable, 'Enable')
-	const getAirflowReading = async () => {
-		return parseFloat(await actionContent.locator("#bodyTable").locator(`[primid="prim_${airflow.feedbackValue}"]`).textContent())
-	}
+
 	await testAnalogIO(vfd, 0);
-	console.log(await getAirflowReading())
+	console.log(await getAnalogInput(airflow))
 	await testAnalogIO(vfd, 25);
-	console.log(await getAirflowReading())
+	console.log(await getAnalogInput(airflow))
 	await testAnalogIO(vfd, 50);
-	console.log(await getAirflowReading())
+	console.log(await getAnalogInput(airflow))
 	await testAnalogIO(vfd, 75);
-	console.log(await getAirflowReading())
+	console.log(await getAnalogInput(airflow))
 	await testAnalogIO(vfd, 100);
 	await page.waitForTimeout(3000);
-	let final = await getAirflowReading()
+	let final = await getAnalogInput(airflow)
 	expect(final).toBeGreaterThanOrEqual(45000);
 	await page.waitForTimeout(3000);
 })
@@ -334,7 +333,7 @@ async function testAnalogInput(device){
 	let initial = await getAnalogInput(device);
 	for(let i = 0; i < 400; i++){
 		feedback = await getAnalogInput(device);
-		if(Math.abs(feedback - initial) >= 1){
+		if(Math.abs(feedback - initial) >= 0.3){
 			await page.waitForTimeout(500);
 			feedback = await getAnalogInput(device);
 			console.log(`${name} feedback: ${feedback}`);

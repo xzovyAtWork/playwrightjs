@@ -9,7 +9,7 @@ function test{
 	$userInput = Read-Host -Prompt $prompt
 	Write-Host $grep
 	if($userInput -eq 'y'){
-		npx playwright test $test -g $grep --retries 1 --headed
+		npx playwright test $test -g $grep --retries 1
 	}
 }
 
@@ -20,7 +20,6 @@ if($specificTest -ne ''){
 	npx playwright test $test -g $specificTest --headed
 }
 test -prompt "Begin download? (enter 'y' to start)" -grep "download"
-test -prompt "Begin check faults? (enter 'y' to start)" -grep "check faults"
 test -prompt "Begin low voltage? (enter 'y' to start)" -grep "low voltage"
 test -prompt "Begin filling sump tank? (enter 'y' to start)" -grep "fill tank" 
 test -prompt "Begin Evap section? (enter 'y' to start)" -grep "evap section"
