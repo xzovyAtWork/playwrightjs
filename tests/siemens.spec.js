@@ -230,6 +230,10 @@ test("hand", () => {
 	return new Promise(() => { })
 })
 
+
+///
+//Analog
+///
 async function getBinaryInput (device, value){
 	const {name, commandValue, feedbackValue} = device
 	await page.locator("ul.list-group").locator("div", {hasText: feedbackValue}).first().locator("div.text-primary").click();
@@ -265,6 +269,10 @@ async function testBinaryIO(device, state1, state2){
 	await commandBinaryDevice(device, state2)
 	await getBinaryInput(device, state2)
 }
+
+///
+// Binary
+///
 async function testAnalogInput(device){
 	const {name, commandValue, feedbackValue} = device;
 	let feedback;
@@ -311,6 +319,7 @@ async function commandAnalogDevice(device, value){
 
 async function testAnalogIO(device, value){
 	const {name, commandValue, feedbackValue} = device;
+	const feedbackReadings = []
 	await commandAnalogDevice(device, value);
 	let result;
 	await page.locator("ul.list-group").locator("div", {hasText: feedbackValue}).first().locator("div.text-primary").scrollIntoViewIfNeeded();
@@ -320,10 +329,12 @@ async function testAnalogIO(device, value){
 		if (Math.abs(value - result) <= 5 ) {
 			await page.waitForTimeout(5000);
 			feedback = await page.locator("ul.list-group").locator("div", {hasText: feedbackValue}).first().locator("div.text-primary").textContent();
+			feedbackReadings.push(feedback)
 			console.log(`${name} feedback: ${feedback}`);
 			break;	
 		}
 		feedback = await page.locator("ul.list-group").locator("div", {hasText: feedbackValue}).first().locator("div.text-primary").textContent();
 		await new Promise(r => setTimeout(r, 7000));
 	}
+	console.log(name, feedbackReadings)
 }

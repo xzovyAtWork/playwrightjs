@@ -152,14 +152,15 @@ test.describe('low voltage', () => {
 		await testAnalogIO(faceDamper, 20);
 		await testAnalogIO(faceDamper, 50);
 		await testAnalogIO(faceDamper, 100);
-		await commandAnalogDevice(faceDamper, 20);
 	})
 	test('bypass damper', async () => {
 		test.setTimeout(5 * 60000)
 		await testAnalogIO(bypassDamper, 100);
 		await testAnalogIO(bypassDamper, 50);
 		await testAnalogIO(bypassDamper, 20);
+
 		await commandAnalogDevice(bypassDamper, 100)
+		await commandAnalogDevice(faceDamper, 20);
 	})
 })
 test('fill tank', async ()=>{
@@ -277,6 +278,13 @@ test.describe('full water', async () => {
 	})
 })
 
+test("close dampers", async ()=>{
+	await commandAnalogDevice(faceDamper, 0)
+	await commandAnalogDevice(bypassDamper, 0)
+	await testAnalogIO(faceDamper, 0)
+	await testAnalogIO(bypassDamper, 0)
+})
+
 ////
 ///Binary devices
 ////
@@ -359,21 +367,24 @@ async function commandAnalogDevice(device, value){
 }
 
 async function testAnalogIO(device, value) {
-	const {feedbackValue, commandValue, lockedValue} = device
+	const {feedbackValue, commandValue, lockedValue, name} = device
+	const feedbackReadings = []
 	await commandAnalogDevice(device, value);
-	let result = 100;
+	let result;
 	for (let i = 0; i < 40; i++) {
-		let feedback = getAnalogInput(device)
+		let feedback = await getAnalogInput(device)
 		result = parseInt(feedback);
 		if (Math.abs(value - result) < 5) {
 			await page.waitForTimeout(5000);
 			feedback = await getAnalogInput(device)
+			feedbackReadings.push(feedback);
 			console.log(`feedback: ${feedback}`);
 			break;
 		}
 		feedback = await getAnalogInput(device)
 		await new Promise(r => setTimeout(r, 7000));
 	}
+	console.log(name, feedbackReadings)
 }
 
 
