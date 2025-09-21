@@ -295,17 +295,29 @@ async function getBinaryInput(device, value){
 	await expect(actionContent.locator("#bodyTable").locator(`[primid="prim_${feedbackValue}"]`)).toContainText(value)
 	console.log(`${name} ${value}`)
 }
-async function commandBinaryDevice(device, value){
+async function commandBinaryDevice(device, value, retries = 0){
 	const {lockedValue, commandValue, name} = device
 	console.log(`commanding ${name}: ${value}`)
 	const currentLockedValue = await actionContent.locator("#bodyTable").locator(`[updateid="prim_${lockedValue}_ctrlid1"]`).locator('span').first().textContent();
+	console.log('Current value:',currentLockedValue)
 	if(currentLockedValue === value){console.log(`${device.name} already ${value}`); return;}
 	await actionContent.locator("#bodyTable").locator(`[updateid="prim_${lockedValue}_ctrlid1"]`).click();
-	console.log(value)
-	await actionContent.locator('div.ControlLightDropList-WidgetLightDropList-rowinactive:visible').getByText(value).click();
+	const dropdown = await actionContent.locator('div.ControlLightDropList-WidgetLightDropList-rowinactive:visible').filter({hasText: value})
+	if(retries <=3){
 
-	await accept()
-	// await expect(actionContent.locator("#bodyTable").locator(`[primid="prim_${commandValue}"]`)).toHaveText(value, {timeout: 2000})
+		try{
+			await expect.soft(dropdown, "").toBeVisible();
+			await dropdown.click();
+			await accept()
+			await expect.soft(actionContent.locator("#bodyTable").locator(`[primid="prim_${commandValue}"]`), ` ${name}: ${commandValue}`).toHaveText(value, {timeout: 2000})
+			
+		}catch(error){
+			console.log(error);
+			console.log("Command Failed, trying again...")
+			await commandBinaryDevice(device, value, retries++)
+		}
+	}
+		
 	console.log(`${name}: ${value}`)
 };
 
@@ -329,10 +341,12 @@ async function testBinaryIO(device, state1, state2) {
 ////
 async function getAnalogInput(device){
 	const {feedbackValue, name} = device
-	let result;
 	let value = parseFloat(await actionContent.locator("#bodyTable").locator(`[primid="prim_${feedbackValue}"]`).textContent());
 	console.log(`${name} reading: ${value}`)
-	// expect(value).toBeGreaterThan(0);
+	if (isNaN(value) || value < 0) {
+		value = parseFloat(await actionContent.locator("#bodyTable").locator(`[primid="prim_${feedbackValue}"]`).textContent());
+	}
+	expect.soft(value).toBeGreaterThan(0);
 	return value;
 }
 
@@ -370,11 +384,9 @@ async function commandAnalogDevice(device, value){
 async function testAnalogIO(device, value) {
 	const {feedbackValue, commandValue, lockedValue, name} = device
 	await commandAnalogDevice(device, value);
-	let result;
 	for (let i = 0; i < 40; i++) {
 		let feedback = await getAnalogInput(device)
-		result = parseInt(feedback);
-		if (Math.abs(value - result) < 5) {
+		if (Math.abs(value - feedback) < 5) {
 			await page.waitForTimeout(5000);
 			feedback = await getAnalogInput(device)
 			console.log(`feedback: ${feedback}`);

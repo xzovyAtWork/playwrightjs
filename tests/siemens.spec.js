@@ -295,8 +295,11 @@ async function getAnalogInput(device){
 	await page.locator("ul.list-group").locator("div", {hasText: feedbackValue}).first().locator("div.text-primary").click();
 	await page.locator("ul.list-group").locator("div", {hasText: feedbackValue}).first().locator("div.text-primary").scrollIntoViewIfNeeded();
 	let value = parseFloat(await page.locator("ul.list-group").locator("div", {hasText: feedbackValue}).first().locator("div.text-primary").textContent());
+	if (isNaN(value) || value < 0) {
+		value = parseFloat(await actionContent.locator("#bodyTable").locator(`[primid="prim_${feedbackValue}"]`).textContent());
+	}
+	expect.soft(value).toBeGreaterThan(0);
 	console.log(`${name} reading: ${value}`)
-	expect(value).toBeGreaterThan(0)
 	return value;
 }
 
