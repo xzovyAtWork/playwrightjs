@@ -274,7 +274,6 @@ test.describe('full water', async () => {
 		await commandBinaryDevice(drain, 'Open');
 		await commandBinaryDevice(sump, 'Off');
 		await commandBinaryDevice(bleed, 'Off');
-		console.log("waiting for WLL to change state...")
 		await getBinaryInput(wll, "Low")
 		console.log('Conductivity Readings', conductivityReadings);
 	})
@@ -382,7 +381,6 @@ async function commandAnalogDevice(device, value){
 }
 
 async function testAnalogIO(device, value) {
-	const {feedbackValue, commandValue, lockedValue, name} = device
 	await commandAnalogDevice(device, value);
 	for (let i = 0; i < 40; i++) {
 		let feedback = await getAnalogInput(device)
@@ -395,7 +393,6 @@ async function testAnalogIO(device, value) {
 		await new Promise(r => setTimeout(r, 7000));
 	}
 }
-
 
 async function accept(){
 	await expect(page.getByRole('cell', { name: 'Accept Cancel' })).toBeVisible();
