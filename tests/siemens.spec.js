@@ -232,12 +232,13 @@ test("hand", () => {
 
 
 ///
-//Analog
+// Binary
 ///
 async function getBinaryInput (device, value){
 	const {name, commandValue, feedbackValue} = device
 	await page.locator("ul.list-group").locator("div", {hasText: feedbackValue}).first().locator("div.text-primary").click();
-	await page.locator("ul.list-group").locator("div", {hasText: feedbackValue}).first().locator("div.text-primary").scrollIntoViewIfNeeded();
+	await page.locator("ul.list-group").locator("div", {hasText: feedbackValue}).first().locator("div.text-primary").scrollyIntoViewIfNeeded();
+	console.log(`Waiting for ${name} to be ${value}...`)
 	await expect(page.locator("ul.list-group").locator("div", {hasText: feedbackValue}).first().locator("div.text-primary")).toContainText(value);
 	console.log(`${name}: ${value}`)
 }
@@ -259,7 +260,6 @@ async function commandBinaryDevice(device, value){
 async function testBinaryInput(device, state1, state2){
 	const {name, commandValue, feedbackValue} = device;
 	await getBinaryInput(device, state1)
-	console.log(`${name}: ${state1} Waiting for state change...`);
 	await getBinaryInput(device, state2)
 	console.log(`${name}: ${state2}`)
 }
@@ -271,7 +271,7 @@ async function testBinaryIO(device, state1, state2){
 }
 
 ///
-// Binary
+// Analog
 ///
 async function testAnalogInput(device){
 	const {name, commandValue, feedbackValue} = device;
@@ -286,7 +286,6 @@ async function testAnalogInput(device){
 			console.log(`${name} feedback: ${feedback}`);
 			break;
 		}
-		feedback = await getAnalogInput(device)
 		await new Promise(r => setTimeout(r, 7000));
 	}
 	return parseInt(feedback)
@@ -319,7 +318,6 @@ async function commandAnalogDevice(device, value){
 
 async function testAnalogIO(device, value){
 	const {name, commandValue, feedbackValue} = device;
-	const feedbackReadings = []
 	await commandAnalogDevice(device, value);
 	let result;
 	await page.locator("ul.list-group").locator("div", {hasText: feedbackValue}).first().locator("div.text-primary").scrollIntoViewIfNeeded();
@@ -329,12 +327,10 @@ async function testAnalogIO(device, value){
 		if (Math.abs(value - result) <= 5 ) {
 			await page.waitForTimeout(5000);
 			feedback = await page.locator("ul.list-group").locator("div", {hasText: feedbackValue}).first().locator("div.text-primary").textContent();
-			feedbackReadings.push(feedback)
 			console.log(`${name} feedback: ${feedback}`);
 			break;	
 		}
 		feedback = await page.locator("ul.list-group").locator("div", {hasText: feedbackValue}).first().locator("div.text-primary").textContent();
 		await new Promise(r => setTimeout(r, 7000));
 	}
-	console.log(name, feedbackReadings)
 }

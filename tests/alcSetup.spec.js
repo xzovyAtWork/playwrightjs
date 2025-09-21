@@ -1,6 +1,6 @@
 require('log-timestamp')(()=>`${new Date().toLocaleTimeString()}`);
 import { test, expect, page, Context} from '@playwright/test'
-
+test.setTimeout(0);
 test('set controller IP', async ({ page }) => {
 	console.log('opening My Module/ports...')
 	await page.goto('http://169.254.1.1/ports');

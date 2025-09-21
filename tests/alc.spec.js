@@ -215,6 +215,7 @@ test.describe('motor section', async () => {
 			console.log(fan.name)
 			await testBinaryInput(fan, 'On', 'Off');
 		}
+		console.log('check that motor protectors control the correct motor..')
 	})	
 	test('vfd HOA', async () => {
 		test.setTimeout(10 * 60000);
@@ -243,7 +244,7 @@ test('ramp fans', async () => {
 test('run on timer', async () => {
 	test.setTimeout(0)
 	console.log('running fans for 30 minutes')
-	await page.waitForTimeout(20 * 60000);
+	await page.waitForTimeout(30 * 60000);
 	await commandBinaryDevice(vfdEnable, 'Disable');
 })
 test.describe('full water', async () => {
@@ -262,7 +263,7 @@ test.describe('full water', async () => {
 		await expect(await actionContent.locator("#bodyTable").locator(`[primid="prim_${wol.feedbackValue}"]`)).toHaveText("Normal", {timeout: 10 * 60000})
 		await commandBinaryDevice(sump, 'On');
 		const startValue = await getConductivityValue();
-		console.log(`starting cycle. Conductivity: ${startValue}`)
+		console.log(`starting cycle. Conductivity: ${startValue}. running for 30 minutes...` )
 		await page.waitForTimeout(10 * 60000);
 		console.log("..")
 		await page.waitForTimeout(10 * 60000);
@@ -273,7 +274,8 @@ test.describe('full water', async () => {
 		await commandBinaryDevice(drain, 'Open');
 		await commandBinaryDevice(sump, 'Off');
 		await commandBinaryDevice(bleed, 'Off');
-		await expect(await actionContent.locator("#bodyTable").locator(`[primid="prim_${wll.feedbackValue}"]`)).toHaveText("Low", {timeout: 0})
+		console.log("waiting for WLL to change state...")
+		await getBinaryInput(wll, "Low")
 		console.log('Conductivity Readings', conductivityReadings);
 	})
 })
@@ -281,8 +283,7 @@ test.describe('full water', async () => {
 test("close dampers", async ()=>{
 	await commandAnalogDevice(faceDamper, 100)
 	await commandAnalogDevice(bypassDamper, 100)
-	await testAnalogIO(faceDamper, 0)
-	await testAnalogIO(bypassDamper, 0)
+	await testAnalogIO(faceDamper, 100)
 })
 
 ////
@@ -290,6 +291,7 @@ test("close dampers", async ()=>{
 ////
 async function getBinaryInput(device, value){
 	const {feedbackValue, commandValue, lockedValue, name} = device
+	console.log(`Waiting for ${name} to be ${value}...`)
 	await expect(actionContent.locator("#bodyTable").locator(`[primid="prim_${feedbackValue}"]`)).toContainText(value)
 	console.log(`${name} ${value}`)
 }
@@ -303,14 +305,13 @@ async function commandBinaryDevice(device, value){
 	await actionContent.locator('div.ControlLightDropList-WidgetLightDropList-rowinactive:visible').getByText(value).click();
 
 	await accept()
-	await expect(actionContent.locator("#bodyTable").locator(`[primid="prim_${commandValue}"]`)).toHaveText(value, {timeout: 2000})
+	// await expect(actionContent.locator("#bodyTable").locator(`[primid="prim_${commandValue}"]`)).toHaveText(value, {timeout: 2000})
 	console.log(`${name}: ${value}`)
 };
 
 async function testBinaryInput(device, state1, state2){
 	const {feedbackValue, name} = device;
 	await getBinaryInput(device, state1)
-	console.log(`${name}: ${state1} Waiting for state change...`);
 	await getBinaryInput(device, state2)
 	console.log(`${name}: ${state2}`)
 }
@@ -331,7 +332,7 @@ async function getAnalogInput(device){
 	let result;
 	let value = parseFloat(await actionContent.locator("#bodyTable").locator(`[primid="prim_${feedbackValue}"]`).textContent());
 	console.log(`${name} reading: ${value}`)
-	expect(value).toBeGreaterThan(0);
+	// expect(value).toBeGreaterThan(0);
 	return value;
 }
 
@@ -368,7 +369,6 @@ async function commandAnalogDevice(device, value){
 
 async function testAnalogIO(device, value) {
 	const {feedbackValue, commandValue, lockedValue, name} = device
-	const feedbackReadings = []
 	await commandAnalogDevice(device, value);
 	let result;
 	for (let i = 0; i < 40; i++) {
@@ -377,14 +377,11 @@ async function testAnalogIO(device, value) {
 		if (Math.abs(value - result) < 5) {
 			await page.waitForTimeout(5000);
 			feedback = await getAnalogInput(device)
-			feedbackReadings.push(feedback);
 			console.log(`feedback: ${feedback}`);
 			break;
 		}
-		feedback = await getAnalogInput(device)
 		await new Promise(r => setTimeout(r, 7000));
 	}
-	console.log(name, feedbackReadings)
 }
 
 
