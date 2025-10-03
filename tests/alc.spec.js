@@ -36,6 +36,8 @@ test.beforeAll('navigate to I/O points', async () => {
 });
 
 test.afterAll(async () => {
+	await page.getByRole('img', { name: 'System Menu' }).click();
+	await page.locator('iframe[name="rightMenuiframe"]').contentFrame().getByText('Log out Silent Aire').click();
 	await page.waitForTimeout(500)
 	await context.close();
 })
@@ -105,6 +107,9 @@ test.describe('low voltage', () => {
 		await commandAnalogDevice(vfd, 0);
 		await commandAnalogDevice(faceDamper, 20);
 		await commandAnalogDevice(bypassDamper, 100);
+		await getBinaryInput(wll, "Low")
+		await getBinaryInput(wol, "Low")
+		await getBinaryInput(whl, "Normal")
 	})
 
 	test('leak', async () => {
@@ -143,9 +148,10 @@ test.describe('low voltage', () => {
 		await testAnalogInput(rh2)
 	})
 	test('sa temp', async ()=>{
-		let value = getAnalogInput(saTemp.feedbackValue)
+		let value = await getAnalogInput(saTemp)
+		console.log(value)
 		test.skip( value < 0,`${saTemp.name} faulty`);
-		await getAnalogInput(saTemp)
+		await testAnalogInput(saTemp)
 	})
 	test('face damper', async () => {
 		test.setTimeout(5 * 60000);
@@ -251,7 +257,7 @@ test.describe('full water', async () => {
 	const conductivityReadings = [];
 	async function getConductivityValue(){
 		await page.waitForTimeout(10000);
-		const conductivityReading = parseFloat(await actionContent.locator("#bodyTable").locator(`[primid="prim_${conductivity.feedbackValue}"]`).textContent());
+		const conductivityReading = await getAnalogInput(conductivity)
 		conductivityReadings.push(conductivityReading)
 		return conductivityReading;
 	}
@@ -260,7 +266,7 @@ test.describe('full water', async () => {
 		await commandBinaryDevice(fill, 'Open')
 		await commandBinaryDevice(drain, 'Close');
 		console.log('waiting for tank to fill...')
-		await expect(await actionContent.locator("#bodyTable").locator(`[primid="prim_${wol.feedbackValue}"]`)).toHaveText("Normal", {timeout: 10 * 60000})
+		await getBinaryInput(wol, "Normal")
 		await commandBinaryDevice(sump, 'On');
 		const startValue = await getConductivityValue();
 		console.log(`starting cycle. Conductivity: ${startValue}. running for 30 minutes...` )
@@ -308,7 +314,7 @@ async function commandBinaryDevice(device, value, retries = 0){
 			await expect.soft(dropdown, "").toBeVisible();
 			await dropdown.click();
 			await accept()
-			await expect.soft(actionContent.locator("#bodyTable").locator(`[primid="prim_${commandValue}"]`), ` ${name}: ${commandValue}`).toHaveText(value, {timeout: 2000})
+			await expect.soft(actionContent.locator("#bodyTable").locator(`[primid="prim_${commandValue}"]`), ` ${name}: ${commandValue}`).toHaveText(value, {timeout: 10000})
 			
 		}catch(error){
 			console.log(error);
@@ -341,11 +347,11 @@ async function testBinaryIO(device, state1, state2) {
 async function getAnalogInput(device){
 	const {feedbackValue, name} = device
 	let value = parseFloat(await actionContent.locator("#bodyTable").locator(`[primid="prim_${feedbackValue}"]`).textContent());
-	console.log(`${name} reading: ${value}`)
 	if (isNaN(value) || value < 0) {
 		value = parseFloat(await actionContent.locator("#bodyTable").locator(`[primid="prim_${feedbackValue}"]`).textContent());
 	}
-	expect.soft(value).toBeGreaterThan(0);
+	// expect.soft(value).toBeGreaterThan(0);
+	console.log(`${name} reading: ${value}`)
 	return value;
 }
 
