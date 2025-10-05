@@ -301,7 +301,6 @@ test.describe('full water', async () => {
 })
 
 test("close dampers", async ()=>{
-	test.describe.configure({timeout: 5*60000})
 	await commandAnalogDevice(faceDamper, 100)
 	await commandAnalogDevice(bypassDamper, 100)
 	await testAnalogIO(faceDamper, 100)
