@@ -15,7 +15,7 @@ let page;
 let context;
 let actionContent;
 
-// test.describe.configure({timeout: 10 * 60000})
+test.describe.configure({timeout: 10 * 60000, mode: "serial"})
 test.beforeAll('log in', async ({ browser }) => {
 
 	console.log('logging in to ALC...')
@@ -29,10 +29,11 @@ test.beforeAll('log in', async ({ browser }) => {
 	console.log("Logged in to ALC");
 
 })
-test.beforeAll('navigate to I/O points', async () => {
+test.beforeEach('navigate to I/O points', async ({ }, testInfo) => {
 	const ioPoints = await page.locator('#facetContent').contentFrame().getByText("I/O Points")
 	await ioPoints.click();
-	actionContent = await page.locator("#actionContent").contentFrame();
+	actionContent = getActionFrame();
+	console.log(`🔴 Started ${testInfo.title}...`);
 });
 
 test.afterAll(async () => {
@@ -41,9 +42,7 @@ test.afterAll(async () => {
 	await page.waitForTimeout(500)
 	await context.close();
 })
-test.beforeEach(async ({ }, testInfo) => {
-	console.log(`🔴 Started ${testInfo.title}...`);
-})
+
 test.afterEach(async ({ }, testInfo) => {
 	console.log(`✅ Completed test: ${testInfo.title}`);
 });
@@ -52,7 +51,11 @@ test.describe('download and check faults', () => {
 	test('download program', async () => {
 		await page.waitForTimeout(2000);
 		let saValue = await getAnalogInput(saTemp)
-		test.skip(saValue !== '?', "Program already downloaded")
+		if (!isNaN(saValue)) {
+			test.skip();
+			return;
+		  }
+		  
 		test.setTimeout(10 * 60000)
 		let text;
 		console.log('downloading controller program...');
@@ -218,7 +221,6 @@ test.describe("evap section", ()=> {
 })
 
 test.describe('motor section', async () => {
-	test.describe.configure({ mode: 'serial' });
 	test('secondary power status', async() => {
 		await testBinaryInput(secondary, 'Off', 'On');
 	})
@@ -299,6 +301,7 @@ test.describe('full water', async () => {
 })
 
 test("close dampers", async ()=>{
+	test.describe.configure({timeout: 5*60000})
 	await commandAnalogDevice(faceDamper, 100)
 	await commandAnalogDevice(bypassDamper, 100)
 	await testAnalogIO(faceDamper, 100)
@@ -360,9 +363,10 @@ async function testBinaryIO(device, state1, state2) {
 async function getAnalogInput(device){
 	const {feedbackValue, name} = device
 	let value = parseFloat(await actionContent.locator("#bodyTable").locator(`[primid="prim_${feedbackValue}"]`).textContent());
-	if (isNaN(value) || value < 0) {
+	if (!isNaN(value) || value < 0) {
 		value = parseFloat(await actionContent.locator("#bodyTable").locator(`[primid="prim_${feedbackValue}"]`).textContent());
 	}
+	
 	// expect.soft(value).toBeGreaterThan(0);
 	console.log(`${name} reading: ${value}`)
 	return value;
@@ -372,6 +376,11 @@ async function testAnalogInput(device){
 	const {name, feedbackValue} = device;
 	let feedback;
 	let initial = await getAnalogInput(device);
+	if(isNaN(initial)|| initial < 0){
+		console.log(`${name} reading: ${initial}, trying again`);
+		await page.waitForTimeout(5000)
+		return testAnalogInput(device)
+	}
 	for(let i = 0; i < 400; i++){
 		feedback = await getAnalogInput(device);
 		if(Math.abs(feedback - initial) >= 0.3){
@@ -413,7 +422,16 @@ async function testAnalogIO(device, value) {
 	}
 }
 
+
+
+//
+//Controller Specific
+//
 async function accept(){
 	await expect(page.getByRole('cell', { name: 'Accept Cancel' })).toBeVisible();
 	await page.locator('#acceptSpan').getByText('Accept').click();
 }
+
+function getActionFrame() {
+	return page.locator("#actionContent").contentFrame();
+  }

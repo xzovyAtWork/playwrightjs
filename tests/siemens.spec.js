@@ -280,7 +280,11 @@ async function testAnalogInput(device){
 	const {name, commandValue, feedbackValue} = device;
 	let feedback;
 	let initial = await getAnalogInput(device);
-	expect(initial)
+	if(isNaN(initial)|| initial < 0){
+		console.log(`${name} reading: ${initial}, trying again`);
+		await page.waitForTimeout(5000)
+		return testAnalogInput(device)
+	}
 	for (let i = 0; i < 400; i++) {
 		feedback = await getAnalogInput(device);
 		if (Math.abs(feedback - initial) >= 1 ) {
