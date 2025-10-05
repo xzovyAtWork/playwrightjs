@@ -15,14 +15,14 @@ let page;
 let context;
 let actionContent;
 
-test.describe.configure({timeout: 10 * 60000})
+// test.describe.configure({timeout: 10 * 60000})
 test.beforeAll('log in', async ({ browser }) => {
 
 	console.log('logging in to ALC...')
 	context = await browser.newContext({ bypassCSP: true });
   	page = await context.newPage();
 
-	page.goto('http://localhost:8080');
+	await page.goto('http://localhost:8080');
 	await page.locator('#nameInput').fill('silent');
 	await page.locator('#pass').fill('password123');
 	await page.getByRole("button", { name: 'Log in' }).click();
@@ -30,9 +30,9 @@ test.beforeAll('log in', async ({ browser }) => {
 
 })
 test.beforeAll('navigate to I/O points', async () => {
-	const ioPoints = page.locator('#facetContent').contentFrame().getByText("I/O Points")
+	const ioPoints = await page.locator('#facetContent').contentFrame().getByText("I/O Points")
 	await ioPoints.click();
-	actionContent = page.locator("#actionContent").contentFrame();
+	actionContent = await page.locator("#actionContent").contentFrame();
 });
 
 test.afterAll(async () => {
@@ -51,7 +51,7 @@ test.describe('download and check faults', () => {
 
 	test('download program', async () => {
 		await page.waitForTimeout(2000);
-		let saValue = await actionContent.locator("#bodyTable").locator(`[primid="prim_${saTemp.feedbackValue}"]`).textContent()
+		let saValue = await getAnalogInput(saTemp)
 		test.skip(saValue !== '?', "Program already downloaded")
 		test.setTimeout(10 * 60000)
 		let text;
@@ -66,7 +66,7 @@ test.describe('download and check faults', () => {
 		}
 		await expect(actionContent.locator("#ch_message_div", {hasText: "Downloading"})).not.toBeVisible()
 		console.log(await actionContent.locator("#ch_message_div").first().textContent())
-		await expect(await actionContent.locator("#ch_message_div").first()).not.toBeVisible({timeout: 5000})
+		await expect( actionContent.locator("#ch_message_div").first()).not.toBeVisible({timeout: 5000})
 		console.log(text)
 		console.log('program download complete');
 	})
@@ -111,9 +111,21 @@ test.describe('low voltage', () => {
 		await getBinaryInput(wol, "Low")
 		await getBinaryInput(whl, "Normal")
 	})
-
+	test('leak detector breaker', async () => {
+		test.setTimeout(60000);
+	
+		const mpdc = testBinaryInput(leak1, 'Normal', 'Alarm');
+		const mechGalleryLeak = testBinaryInput(leak2, 'Normal', 'Alarm');
+		try {
+			await Promise.any([mechGalleryLeak, mpdc]);
+		} catch (err) {
+			console.error('Both tests failed, aborting...');
+			throw err;
+		}
+	})
 	test('leak', async () => {
 		test.setTimeout(60000);
+
 		const mpdc = testBinaryInput(leak1, 'Normal', 'Alarm');
 		const mechGalleryLeak = testBinaryInput(leak2, 'Normal', 'Alarm');
 		try {
@@ -154,17 +166,18 @@ test.describe('low voltage', () => {
 		await testAnalogInput(saTemp)
 	})
 	test('face damper', async () => {
-		test.setTimeout(5 * 60000);
+		test.setTimeout(6 * 60000);
 		await testAnalogIO(faceDamper, 20);
 		await testAnalogIO(faceDamper, 50);
 		await testAnalogIO(faceDamper, 100);
 	})
 	test('bypass damper', async () => {
-		test.setTimeout(5 * 60000)
+		test.setTimeout(6 * 60000)
+		await page.waitForTimeout(30000)
 		await testAnalogIO(bypassDamper, 100);
 		await testAnalogIO(bypassDamper, 50);
 		await testAnalogIO(bypassDamper, 20);
-
+		
 		await commandAnalogDevice(bypassDamper, 100)
 		await commandAnalogDevice(faceDamper, 20);
 	})
