@@ -86,6 +86,9 @@ test.describe('low voltage', ()=>{
 		await testAnalogInput(rh2)
 	})
 	test("sa temp", async () => {
+		let value = await getAnalogInput(saTemp)
+		console.log(value)
+		test.skip( value < 0 || isNaN(value) ,`${saTemp.name} faulty`);
 		await testAnalogInput(saTemp)
 	})
 	

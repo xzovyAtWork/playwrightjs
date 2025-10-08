@@ -165,7 +165,7 @@ test.describe('low voltage', () => {
 	test('sa temp', async ()=>{
 		let value = await getAnalogInput(saTemp)
 		console.log(value)
-		test.skip( value < 0,`${saTemp.name} faulty`);
+		test.skip( value < 0 || isNaN(value) ,`${saTemp.name} faulty`);
 		await testAnalogInput(saTemp)
 	})
 	test('face damper', async () => {
@@ -304,6 +304,11 @@ test("close dampers", async ()=>{
 	await commandAnalogDevice(faceDamper, 100)
 	await commandAnalogDevice(bypassDamper, 100)
 	await testAnalogIO(faceDamper, 100)
+})
+
+test("hand", () => {
+	test.setTimeout(0)
+	return new Promise(() => { })
 })
 
 ////
