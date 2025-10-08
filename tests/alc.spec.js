@@ -326,24 +326,29 @@ async function commandBinaryDevice(device, value, retries = 0){
 	const currentLockedValue = await actionContent.locator("#bodyTable").locator(`[updateid="prim_${lockedValue}_ctrlid1"]`).locator('span').first().textContent();
 	console.log('Current value:',currentLockedValue)
 	if(currentLockedValue === value){console.log(`${device.name} already ${value}`); return;}
-	await actionContent.locator("#bodyTable").locator(`[updateid="prim_${lockedValue}_ctrlid1"]`).click();
-	const dropdown = await actionContent.locator('div.ControlLightDropList-WidgetLightDropList-rowinactive:visible').filter({hasText: value})
-	if(retries <=3){
-
-		try{
-			await expect.soft(dropdown, "").toBeVisible();
-			await dropdown.click();
-			await accept()
-			await expect.soft(actionContent.locator("#bodyTable").locator(`[primid="prim_${commandValue}"]`), ` ${name}: ${commandValue}`).toHaveText(value, {timeout: 10000})
+	try{
+		await actionContent.locator("#bodyTable").locator(`[updateid="prim_${lockedValue}_ctrlid1"]`).click();
+		const dropdown = await actionContent.locator('div.ControlLightDropList-WidgetLightDropList-rowinactive:visible').filter({hasText: value})
+		if(retries < 3){
 			
-		}catch(error){
-			console.log(error);
-			console.log("Command Failed, trying again...")
-			await commandBinaryDevice(device, value, retries++)
+			try{
+				await expect.soft(dropdown, "").toBeVisible();
+				await dropdown.click();
+				await accept()
+				await expect.soft(actionContent.locator("#bodyTable").locator(`[primid="prim_${commandValue}"]`), ` ${name}: ${commandValue}`).toHaveText(value, {timeout: 10000})
+				
+			}catch(error){
+				console.log(error);
+				console.log("Command Failed, trying again...")
+				await page.waitForTimeout(500);
+				await commandBinaryDevice(device, value, retries + 1)
+			}
 		}
-	}
 		
-	console.log(`${name}: ${value}`)
+		console.log(`${name}: ${value}`)
+	}catch(error){
+		throw new Error(`Failed to command ${name}, error: ${error.message}`)
+	}
 };
 
 async function testBinaryInput(device, state1, state2){
@@ -371,7 +376,6 @@ async function getAnalogInput(device){
 		value = parseFloat(await actionContent.locator("#bodyTable").locator(`[primid="prim_${feedbackValue}"]`).textContent());
 	}
 	
-	// expect.soft(value).toBeGreaterThan(0);
 	console.log(`${name} reading: ${value}`)
 	return value;
 }
@@ -399,16 +403,21 @@ async function testAnalogInput(device){
 	return parseInt(feedback);
 }
 
-async function commandAnalogDevice(device, value){
-	const { lockedValue, commandValue } = device
-	const currentValue = parseInt(await actionContent.locator("#bodyTable").locator(`[updateid="prim_${commandValue}_ctrlid1"]`).textContent());
-	if(currentValue !== value){
-		await actionContent.locator("#bodyTable").locator(`[updateid="prim_${lockedValue}_ctrlid1"]`).click();
-		await actionContent.locator("#bodyTable").locator(`[updateid="prim_${lockedValue}_ctrlid1"]`).fill(`${value}`);
-		await page.keyboard.press("Enter")
-		await accept();
-	}else {
-		console.log(`${device.name} ${value}`)
+async function commandAnalogDevice(device, value, retries = 0){
+	const { lockedValue, commandValue, name } = device
+	try{
+		const currentValue = parseInt(await actionContent.locator("#bodyTable").locator(`[updateid="prim_${commandValue}_ctrlid1"]`).textContent());
+		if(currentValue !== value){
+			await actionContent.locator("#bodyTable").locator(`[updateid="prim_${lockedValue}_ctrlid1"]`).click();
+			await actionContent.locator("#bodyTable").locator(`[updateid="prim_${lockedValue}_ctrlid1"]`).fill(`${value}`);
+			await page.keyboard.press("Enter")
+			await page.waitForTimeout(100);
+			await accept();
+		}else {
+			console.log(`${device.name} ${value}`)
+		}
+	}catch(error){
+		throw new Error(`Failed to command ${name}, error: ${error.message}`)
 	}
 }
 
